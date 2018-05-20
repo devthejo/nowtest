@@ -5,8 +5,8 @@
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
-    "build": "tsc",
-    "test": "npm run build ; node `ls test/*.js`"
+    "build": "tsc && tsc -p test",
+    "test": "npm run build ; node test/index"
   },
   "repository": {
     "type": "git",
