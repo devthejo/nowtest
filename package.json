@@ -1,0 +1,30 @@
+{
+  "name": "testnow",
+  "version": "1.0.0",
+  "description": "Minimalistic testing framework designed for writing inline tests",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build ; node `ls test/*.js`"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hyperkot/testnow.git"
+  },
+  "keywords": [
+    "tests",
+    "test",
+    "inline"
+  ],
+  "author": "hyperkot",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hyperkot/testnow/issues"
+  },
+  "homepage": "https://github.com/hyperkot/testnow#readme",
+  "devDependencies": {
+    "@types/source-map-support": "^0.4.0",
+    "source-map-support": "^0.5.6"
+  }
+}
