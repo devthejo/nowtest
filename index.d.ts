@@ -15,7 +15,6 @@ export declare let test: Tests;
 export declare namespace test {
     interface TestsResult {
         date: string;
-        report: string;
         errors: Error[];
         tests: TestsGroupResult;
     }

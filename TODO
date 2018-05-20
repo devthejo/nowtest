@@ -1,1 +1,4 @@
 - support multiple errors for single test
+- track origins (test/callback) for each registered errors
+- skip-method to skip certain tests/groups
+- only-method to run only certain tests/groups

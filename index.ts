@@ -331,47 +331,6 @@ function runGroup(group: GroupNode): Promise<void> {
     });
 }
 
-function getTextReport() {
-    function indent(text: string, n: number = 4) {
-        let indentValue = " ".repeat(n);
-        let result = text.replace(/\n/g, `\n${indentValue}`);
-        result = `${indentValue}${result}`;
-        return result;
-    }
-
-    function reportTest(test: TestNode): string {
-        if (test.passed !== undefined) {
-            if (test.passed) {
-                return `- ${test.name}: passed, OK!`;
-            } else {
-                return `- ${test.name}: FAILED\n${test.error ? test.error.stack : "   returned false"}`;
-            }
-        } else {
-            return `- ${test.name}: N/A`;
-        }
-    }
-
-    function reportGroup(group: GroupNode): string {
-        let own = listTests(group).map(reportTest).join('\n');
-        let groups = listSubGroups(group).map(reportGroup).join('\n');
-
-        if (group === rootGroup) {
-            return `${own}\n${groups}`;
-        }
-        return `[${group.name}]\n${indent(own, 2)}\n${indent(groups, 2)}`;
-    }
-
-    let mainText = reportGroup(rootGroup);
-
-    if (errors.size) {
-        return `___Tests Failed!\n${mainText}\n\n___Errors:\n${
-            [...errors.values()].map(error => error.stack).join('\n')
-            }\n`;
-    } else {
-        return `___Tests Passed!\n${mainText}\n`;
-    }
-}
-
 let runPromise: Promise<test.TestsResult>;
 function run() {
     function getTestResult(testNode: TestNode): test.TestsTestResult {
@@ -425,7 +384,6 @@ function run() {
             }).catch(registerError).then(() => {
                 return {
                     date: new Date().toString(),
-                    report: getTextReport(),
                     errors: [...errors.values()],
                     tests: getGroupResult(rootGroup)
                 };
@@ -456,7 +414,6 @@ test.void = function (name: string, cb: TestCallback) {
 export namespace test {
     export interface TestsResult {
         date: string;
-        report: string;
         errors: Error[];
         tests: TestsGroupResult;
     }
