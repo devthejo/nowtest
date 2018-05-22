@@ -17,22 +17,29 @@ export declare namespace test {
         date: string;
         errors: Error[];
         tests: TestsGroupResult;
+        traverse(options?: ResultTraverseOptions): void;
     }
-    interface TestsGroupResult {
+    interface ResultTraverseOptions {
+        group?: (res: TestsGroupResult) => void;
+        test?: (res: TestsTestResult) => void;
+        groupsFirst?: boolean;
+    }
+    interface TestsResultNode {
         name: string;
+        path: string[];
+        elapsed: number;
+    }
+    interface TestsGroupResult extends TestsResultNode {
         passed: number;
         failed: number;
         total: number;
         groups: TestsGroupResult[];
         tests: TestsTestResult[];
-        elapsed: number;
     }
-    interface TestsTestResult {
-        name: string;
+    interface TestsTestResult extends TestsResultNode {
         passed: boolean;
         error?: Error;
         result?: any;
-        elapsed: number;
     }
 }
 export default test;

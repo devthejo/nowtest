@@ -18,7 +18,6 @@ function mySetImmediate(cb: () => void) {
 }
 
 test.group("mySetImmediate", () => {
-
     test("Executes callback", (resolve: (x: any) => void) =>
         mySetImmediate(() => resolve(true)));
     
@@ -27,7 +26,6 @@ test.group("mySetImmediate", () => {
         clearTimeout(timeoutId);
         setTimeout(() => resolve(true), 100);
     });
-    
 });
 
 ```

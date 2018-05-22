@@ -6,7 +6,7 @@
   "types": "index.d.ts",
   "scripts": {
     "build": "tsc && tsc -p test && webpack",
-    "test": "npm run build ; node test/index"
+    "test": "npm run build ; node test/server"
   },
   "repository": {
     "type": "git",

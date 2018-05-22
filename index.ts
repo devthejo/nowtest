@@ -37,6 +37,16 @@ interface NodeBase {
     type: TestNodeType;
 }
 
+function getNodePath(node: NodeBase) {
+    let path = [];
+    let subj = node;
+    while (!isRootGroup(subj)) {
+        path.unshift(subj.name);
+        subj = subj.parent;
+    }
+    return path;
+}
+
 interface TestNode extends NodeBase {
     /** Successfully executed */
     passed?: boolean;
@@ -71,8 +81,8 @@ interface GroupNode extends NodeBase {
     after: TestCallback[];
 }
 
-function isRootGroup(groupNode: GroupNode) {
-    return !!groupNode.parent && groupNode.name === RootGroupName;
+function isRootGroup(groupNode: NodeBase) {
+    return !groupNode.parent && groupNode.name === RootGroupName;
 }
 
 
@@ -332,12 +342,14 @@ function runGroup(group: GroupNode): Promise<void> {
 }
 
 let runPromise: Promise<test.TestsResult>;
+let lastReport: test.TestsResult;
 function run() {
     function getTestResult(testNode: TestNode): test.TestsTestResult {
         let testResult: test.TestsTestResult = {
             name: testNode.name,
             passed: testNode.passed,
-            elapsed: testNode.elapsed
+            elapsed: testNode.elapsed,
+            path: getNodePath(testNode)
         };
         if ("result" in testNode) testResult.result = testNode.result;
         if ("error" in testNode) testResult.error = testNode.error;
@@ -351,7 +363,8 @@ function run() {
             total: 0,
             groups: [],
             tests: [],
-            elapsed: 0
+            elapsed: 0,
+            path: getNodePath(groupNode)
         };
         listTests(groupNode).forEach(testNode => {
             let testResult = getTestResult(testNode);
@@ -382,10 +395,38 @@ function run() {
                 testDefinitionAsyncCaret = null;
                 return runGroup(rootGroup);
             }).catch(registerError).then(() => {
-                return {
+                function traverse(
+                    what: test.TestsGroupResult,
+                    options: test.ResultTraverseOptions) {
+                    const { test: cbTest, group: cbGroup, groupsFirst } = options;
+                    if (groupsFirst) {
+                        what.groups.forEach(g => {
+                            cbGroup(g);
+                            traverse(g, options);
+                        });
+                    }
+                    what.tests.forEach(t => {
+                        cbTest(t)
+                    });
+                    if (!groupsFirst) {
+                        what.groups.forEach(g => {
+                            cbGroup(g);
+                            traverse(g, options);
+                        });
+                    }
+                }
+                return lastReport = {
                     date: new Date().toString(),
                     errors: [...errors.values()],
-                    tests: getGroupResult(rootGroup)
+                    tests: getGroupResult(rootGroup),
+                    traverse: function (options: test.ResultTraverseOptions = {}) {
+                        const opts = {
+                            test: options.test || (() => { }),
+                            group: options.group || (() => { }),
+                            groupsFirst: options.groupsFirst || false
+                        }
+                        traverse(this.tests, options);
+                    }
                 };
             });
         });
@@ -416,22 +457,29 @@ export namespace test {
         date: string;
         errors: Error[];
         tests: TestsGroupResult;
+        traverse(options?: ResultTraverseOptions): void;
     }
-    export interface TestsGroupResult {
+    export interface ResultTraverseOptions {
+        group?: (res: TestsGroupResult) => void;
+        test?: (res: TestsTestResult) => void;
+        groupsFirst?: boolean;
+    }
+    export interface TestsResultNode {
         name: string;
+        path: string[];
+        elapsed: number;
+    }
+    export interface TestsGroupResult extends TestsResultNode {
         passed: number;
         failed: number;
         total: number;
         groups: TestsGroupResult[];
         tests: TestsTestResult[];
-        elapsed: number;
     }
-    export interface TestsTestResult {
-        name: string;
+    export interface TestsTestResult extends TestsResultNode {
         passed: boolean;
         error?: Error;
         result?: any;
-        elapsed: number;
     }
 }
 
