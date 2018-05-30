@@ -8,9 +8,16 @@ export type TestCallbackPromise = (
 ) => any | Promise<any>;
 export type TestCallback = TestCallbackNoArgs | TestCallbackPromise | TestCallbackResolve;
 
-type TestNodeType = "test" | "group";
+const NodeTypeTest = 'test';
+const NodeTypeGroup = 'group';
+type NodeType = "test" | "group";
 
 export const RootGroupName = "[ROOT]";
+export const DeclarationStage = "declaration";
+export const ExecutionStage = "execution";
+export const DoneStage = "done";
+export type TestingStage = "declaration" | "execution" | "done";
+
 const rootGroup: GroupNode = {
     children: {},
     before: [],
@@ -22,22 +29,54 @@ const rootGroup: GroupNode = {
 
 let currentGroup = rootGroup;
 let currentTest: TestNode = null;
+let currentStage: TestingStage = "declaration";
 
-let errors: Set<Error> = new Set<Error>();
-function registerError(err: Error) {
-    errors.add(err);
+export interface RegisteredError extends Error {
+    timestamp: number;
+    index: number;
+    stage: TestingStage;
+    path: string[];
+    procedure: string;
 }
+
+class ErrorTracker {
+    private errors: Set<RegisteredError> = new Set();
+    constructor() {
+    }
+    public register(error: Error): RegisteredError {
+        const registered = error as RegisteredError;
+        if (!this.errors.has(registered)) {
+            registered.stage = currentStage;
+            registered.timestamp = Date.now();
+            registered.index = this.errors.size;
+            this.errors.add(registered);
+        }
+        return registered;
+    }
+    public add(error: Error) {
+        return this.register(error);
+    }
+    public list() {
+        let result = [...this.errors.values()];
+        result.sort((a, b) => {
+            return b.index - a.index;
+        });
+        return result;
+    }
+}
+
+let errorTracker: ErrorTracker = new ErrorTracker();
 
 interface NodeBase {
+    /** Name of either group or test */
     name: string;
-    /**
-     * Root group is the only node having parent === null
-     */
+    /** Group that contains this node */
     parent: GroupNode;
-    type: TestNodeType;
+    /** NodeType: test or group */
+    type: NodeType;
 }
 
-function getNodePath(node: NodeBase) {
+function getNodePath(node: NodeBase): string[] {
     let path = [];
     let subj = node;
     while (!isRootGroup(subj)) {
@@ -51,28 +90,15 @@ interface TestNode extends NodeBase {
     /** Successfully executed */
     passed?: boolean;
     /** The error that terminated the execution */
-    error?: Error;
+    errors?: RegisteredError[];
     /** The result of the execution (either returned or resolved from promise) */
     result?: any;
+    /** The expected result of execution */
+    expect?: any;
     /** The test callback */
     test: TestCallback;
+    /** Time elapsed for all tests of this node */
     elapsed: number;
-}
-
-let timerStartedAt: number = 0;
-let isTimerStarted: boolean = false;
-function startTimer() {
-    if (isTimerStarted)
-        throw new Error(`Timer is already started.`);
-    timerStartedAt = Date.now();
-    isTimerStarted = true;
-}
-
-function stopTimer() {
-    if (!isTimerStarted) throw new Error(`Timer is not started.`);
-    isTimerStarted = false;
-    const timerStoppedAt = Date.now();
-    return timerStoppedAt - timerStartedAt;
 }
 
 interface GroupNode extends NodeBase {
@@ -85,9 +111,30 @@ function isRootGroup(groupNode: NodeBase) {
     return !groupNode.parent && groupNode.name === RootGroupName;
 }
 
+class ElapsedTimer {
+    private startedAt: number = 0;
+    get isStarted() { return this.startedAt !== 0; }
+    start() {
+        if (this.isStarted)
+            throw new Error(`testnow: timer is already started.`);
+        this.startedAt = Date.now();
+    }
+    stop() {
+        if (!this.isStarted)
+            throw new Error(`testnow: timer was not started.`);
+        const now = Date.now();
+        const result = now - this.startedAt;
+        this.startedAt = 0;
+        return result;
+    }
+}
 
-/** How definitions work - first whenever test-group is defined it puts it's definition code in definition
- * queue. All definitions are executed asynchronously, right after source loaded.
+const elapsedTimer = new ElapsedTimer();
+
+
+/** How definitions work - first whenever test-group is defined
+ *  it puts it's definition callback in definition queue.
+ *  All definitions are executed asynchronously, right after source loaded.
  */
 let testDefinitionAsyncCaret = <Promise<void>>(Promise.resolve());
 let testDefinitionComplete: () => void;
@@ -96,16 +143,27 @@ let testDefinitionCompletePromise = new Promise((resolve, reject) => {
     testDefinitionComplete = resolve;
 });
 
+const Any = Symbol();
+
 namespace runCallback {
     export interface Options {
-        ignoreResult?: boolean;
+        expect?: any;
         timeout?: number;
     }
 }
 
+function assertExpectation(factual: any, expected: any) {
+    if (expected !== Any) {
+        if (factual !== expected) {
+            throw new Error(`Expectation failed: expected ${expected}, got: ${factual}`);
+        }
+    }
+    return factual;
+}
+
 function runCallback(cb: TestCallback, options: runCallback.Options = {}): Promise<any> {
     let timeout = options.timeout || 20000;
-    let ignoreResult = options.ignoreResult || false;
+    let expect = ("expect" in options) ? options.expect : undefined;
     let timeoutId: any = null;
     return new Promise((resolve, reject) => {
         timeoutId = setTimeout(() => {
@@ -117,21 +175,14 @@ function runCallback(cb: TestCallback, options: runCallback.Options = {}): Promi
         else
             resolve((cb as TestCallbackNoArgs)());
     }).catch(failure => {
-        let error = (failure instanceof Error) ? failure : new Error(`Error: ${failure}`);
-        registerError(error);
-        return error;
+        const error = (failure instanceof Error) ? failure : new Error(`Error: ${failure}`);
+        return errorTracker.add(error);
     }).then(result => {
         if (timeoutId) {
             clearTimeout(timeoutId);
             timeoutId = null;
         }
-        if (!ignoreResult) {
-            if (!result) {
-                result = new Error(`Callback returned falsy value: ${result}`);
-            }
-        }
-        if (result instanceof Error) throw result;
-        return result;
+        return assertExpectation(result, expect);
     });;
 }
 
@@ -148,18 +199,16 @@ function sequence(cbs: TestCallback[], options: sequence.Options = {}) {
     const timeout = options.timeout || 20000;
     const recover = options.recover || false;
 
-    let queue = cbs.slice();
+    let queue = [...cbs];
     return new Promise((resolve, reject) => {
-
         function next(prevResult?: any) {
             if (!queue.length) {
                 resolve(true);
             } else {
                 let cb = queue.shift();
-                runCallback(cb, { timeout }).catch((err: Error) => {
-                    registerError(err);
-                    return err;
-                }).then((cbResult) => {
+                runCallback(cb, { timeout }).catch(
+                    (err: Error) => errorTracker.add(err)
+                ).then((cbResult) => {
                     if ((cbResult instanceof Error) && !recover) {
                         reject(cbResult);
                     } else {
@@ -172,16 +221,6 @@ function sequence(cbs: TestCallback[], options: sequence.Options = {}) {
     });
 }
 
-/** 
- * Wraps callback so that it always returns true or Promise resolving with true
- * Such callback fails in 'runCallback' only if an Error occurs
- */
-function ignoreResultValue(cb: TestCallback): TestCallback {
-    return () => {
-        return Promise.resolve((cb as TestCallbackNoArgs)()).then(() => true);
-    };
-}
-
 function getCurrentGroup() {
     return currentGroup;
 }
@@ -192,9 +231,15 @@ function group(name: string, groupDeclarationCallback: TestCallback) {
     let parent = getCurrentGroup();
     defGroups++;
 
-    testDefinitionAsyncCaret = <Promise<void>>testDefinitionAsyncCaret.then(() => {
+    testDefinitionAsyncCaret = <Promise<void>>testDefinitionAsyncCaret
+    .then(() => {
         let child: GroupNode = {
-            children: {}, before: [], after: [], parent, name, type: 'group'
+            children: {},
+            before: [],
+            after: [],
+            parent,
+            name,
+            type: NodeTypeGroup
         };
         if (parent.children[name]) {
             throw new Error(`Name ${name} is already used`);
@@ -202,26 +247,28 @@ function group(name: string, groupDeclarationCallback: TestCallback) {
         parent.children[name] = child;
         setCurrentGroup(child);
         let error: Error = null;
-        return runCallback(ignoreResultValue(groupDeclarationCallback)).catch((err: Error) => {
-            error = err;
-        }).then(() => {
-            setCurrentGroup(parent);
-            defGroups--;
-            if (!defGroups) {
-                testDefinitionComplete();
-            }
-            if (error) throw error;
-        });
+        return runCallback(groupDeclarationCallback)
+            .catch((err: Error) => {
+                error = err;
+            }).then(() => {
+                setCurrentGroup(parent);
+                defGroups--;
+                if (!defGroups) {
+                    testDefinitionComplete();
+                }
+                if (error) throw error;
+            });
     });
 }
-function declTest(name: string, testCallback: TestCallback) {
+function declTest(name: string, testCallback: TestCallback, expect?: any) {
     let parent = getCurrentGroup();
 
     let child: TestNode = {
-        error: null,
+        errors: [],
         test: testCallback,
         name,
         parent,
+        expect,
         type: 'test',
         elapsed: 0
     };
@@ -233,11 +280,11 @@ function declTest(name: string, testCallback: TestCallback) {
 }
 
 function before(cb: TestCallback) {
-    getCurrentGroup().before.push(ignoreResultValue(cb));
+    getCurrentGroup().before.push(cb);
 }
 
 function after(cb: TestCallback) {
-    getCurrentGroup().after.push(ignoreResultValue(cb));
+    getCurrentGroup().after.push(cb);
 }
 
 /**
@@ -267,7 +314,7 @@ function runTest(testNode: TestNode) {
     return Promise.resolve().then(() => {
         let result: any;
         let testError: Error;
-        startTimer();
+        elapsedTimer.start();
 
         currentTest = testNode;
 
@@ -275,7 +322,7 @@ function runTest(testNode: TestNode) {
         let testInitializationError: Error;
         return sequence(listBefores(testNode.parent)).catch(err => {
             testInitializationError = err;
-            registerError(err);
+            currentTest.errors.push(errorTracker.register(err));
         }).then(() => {
             if (testInitializationError) {
                 testNode.error = new Error(
@@ -366,6 +413,9 @@ function run() {
             elapsed: 0,
             path: getNodePath(groupNode)
         };
+        if (groupResult.name === RootGroupName) {
+            groupResult.name = "Tests";
+        }
         listTests(groupNode).forEach(testNode => {
             let testResult = getTestResult(testNode);
             groupResult.tests.push(testResult);
