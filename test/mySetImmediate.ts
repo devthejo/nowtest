@@ -6,8 +6,8 @@ function mySetImmediate(cb: () => void) {
 
 test.group("mySetImmediate", () => {
 
-    test("Executes callback", (resolve: (x: any) => void) =>
-        mySetImmediate(() => resolve(true)));
+    test("Executes callback", (resolve: (x?: any) => void) =>
+        mySetImmediate(() => resolve()));
 
     test("May be cancelled with clearTimeout", (resolve, reject) => {
         let timeoutId = mySetImmediate(() => reject(new Error(`Callback executed`)));

@@ -16,8 +16,8 @@ test.run().then(result => {
                 elapsed = `(${t.elapsed} ms)`;
             }
             console.log(`${indent} - ${t.name}${elapsed}: ${t.passed ? "OK" : "FAILED"} `);
-            if (t.error) {
-                console.error(`${indent}${t.error.stack}`);
+            if (t.errors) {
+                t.errors.forEach(error => console.error(`${indent}${error.stack}`));
             }
         }
     })

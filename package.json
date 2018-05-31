@@ -5,7 +5,7 @@
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
-    "build": "tsc && tsc -p test && webpack",
+    "build": "tsc && tsc -p test",
     "test": "npm run build ; node test/server"
   },
   "repository": {

@@ -190,6 +190,7 @@ namespace sequence {
     export interface Options {
         timeout?: number;
         recover?: boolean;
+        onError?: (error: Error) => void;
     }
 }
 /**
@@ -198,26 +199,28 @@ namespace sequence {
 function sequence(cbs: TestCallback[], options: sequence.Options = {}) {
     const timeout = options.timeout || 20000;
     const recover = options.recover || false;
+    const onError = options.onError || (() => undefined);
 
     let queue = [...cbs];
     return new Promise((resolve, reject) => {
+        function handleError(err: Error) {
+            const error = errorTracker.add(err);
+            onError(error);
+            if (recover) {
+                Promise.resolve().then(next).catch(handleError);
+            } else {
+                reject(error);
+            }
+        }
         function next(prevResult?: any) {
             if (!queue.length) {
                 resolve(true);
             } else {
                 let cb = queue.shift();
-                runCallback(cb, { timeout }).catch(
-                    (err: Error) => errorTracker.add(err)
-                ).then((cbResult) => {
-                    if ((cbResult instanceof Error) && !recover) {
-                        reject(cbResult);
-                    } else {
-                        next();
-                    }
-                });
+                runCallback(cb, { timeout }).then(next).catch(handleError);
             }
-        }
-        next();
+        };
+        Promise.resolve().then(next).catch(handleError);
     });
 }
 
@@ -232,33 +235,33 @@ function group(name: string, groupDeclarationCallback: TestCallback) {
     defGroups++;
 
     testDefinitionAsyncCaret = <Promise<void>>testDefinitionAsyncCaret
-    .then(() => {
-        let child: GroupNode = {
-            children: {},
-            before: [],
-            after: [],
-            parent,
-            name,
-            type: NodeTypeGroup
-        };
-        if (parent.children[name]) {
-            throw new Error(`Name ${name} is already used`);
-        }
-        parent.children[name] = child;
-        setCurrentGroup(child);
-        let error: Error = null;
-        return runCallback(groupDeclarationCallback)
-            .catch((err: Error) => {
-                error = err;
-            }).then(() => {
-                setCurrentGroup(parent);
-                defGroups--;
-                if (!defGroups) {
-                    testDefinitionComplete();
-                }
-                if (error) throw error;
-            });
-    });
+        .then(() => {
+            let child: GroupNode = {
+                children: {},
+                before: [],
+                after: [],
+                parent,
+                name,
+                type: NodeTypeGroup
+            };
+            if (parent.children[name]) {
+                throw new Error(`Name ${name} is already used`);
+            }
+            parent.children[name] = child;
+            setCurrentGroup(child);
+            let error: Error = null;
+            return runCallback(groupDeclarationCallback)
+                .catch((err: Error) => {
+                    error = err;
+                }).then(() => {
+                    setCurrentGroup(parent);
+                    defGroups--;
+                    if (!defGroups) {
+                        testDefinitionComplete();
+                    }
+                    if (error) throw error;
+                });
+        });
 }
 function declTest(name: string, testCallback: TestCallback, expect?: any) {
     let parent = getCurrentGroup();
@@ -317,44 +320,33 @@ function runTest(testNode: TestNode) {
         elapsedTimer.start();
 
         currentTest = testNode;
+        // ToDo: determine which group exactly failed the initialization
+        // ToDo: and fully fail rest of this group
+        let initFailed = false;
 
-        /** An error ocurred in 'before' callbacks */
-        let testInitializationError: Error;
         return sequence(listBefores(testNode.parent)).catch(err => {
-            testInitializationError = err;
-            currentTest.errors.push(errorTracker.register(err));
+            currentTest.errors.push(errorTracker.add(err));
+            currentTest.passed = false;
+            initFailed = true;
         }).then(() => {
-            if (testInitializationError) {
-                testNode.error = new Error(
-                    `Failed to during invocation of "before()" handlers: ${testInitializationError}`
-                );
-                testNode.passed = false;
-                registerError(testNode.error);
-                return Promise.resolve();
-            } else {
-                return runCallback(testNode.test).then(callbackResult => {
+            if (!currentTest.errors.length) {
+                return runCallback(testNode.test, { expect: testNode.expect }).then(callbackResult => {
                     result = callbackResult;
-                    testNode.passed = !!result;
-                    testNode.result = callbackResult;
-                    if (!testNode.passed) {
-                        throw new Error(
-                            `Test failed: ${getFullName(testNode)}`
-                        );
-                    }
+                    currentTest.result = callbackResult;
+                    currentTest.passed = true;
                 }).catch(err => {
-                    testError = err;
-                    testNode.error = testError;
-                    testNode.passed = false;
-                    registerError(err);
+                    currentTest.errors.push(errorTracker.add(err));
+                    currentTest.passed = false;
                 });
             }
+
         }).then(() => {
             return sequence(listAfters(testNode.parent), { recover: true });
         }).catch(cleanupError => {
-            if (!testError) testError = cleanupError;
-            registerError(cleanupError);
+            currentTest.errors.push(errorTracker.add(cleanupError));
+            currentTest.passed = false;
         }).then(() => {
-            testNode.elapsed = stopTimer();
+            testNode.elapsed = elapsedTimer.stop();
             return true;
         });
     });
@@ -384,7 +376,7 @@ function runGroup(group: GroupNode): Promise<void> {
     return Promise.resolve().then(() => {
         return <Promise<void>>sequence(listTests(group).map(test => () => runTest(test)))
             .then(() => sequence(listSubGroups(group).map(subGroup => () => runGroup(subGroup))))
-            .catch(e => { registerError(e); });
+            .catch(e => { errorTracker.add(e); });
     });
 }
 
@@ -398,8 +390,11 @@ function run() {
             elapsed: testNode.elapsed,
             path: getNodePath(testNode)
         };
-        if ("result" in testNode) testResult.result = testNode.result;
-        if ("error" in testNode) testResult.error = testNode.error;
+        testResult.result = testNode.result;
+        if (testNode.errors.length)
+            testResult.errors = testNode.errors;
+        else
+            testResult.result = testNode.result;
         return testResult;
     }
     function getGroupResult(groupNode: GroupNode): test.TestsGroupResult {
@@ -444,7 +439,7 @@ function run() {
             return lastDAC.then(() => {
                 testDefinitionAsyncCaret = null;
                 return runGroup(rootGroup);
-            }).catch(registerError).then(() => {
+            }).catch((err) => errorTracker.add(err)).then(() => {
                 function traverse(
                     what: test.TestsGroupResult,
                     options: test.ResultTraverseOptions) {
@@ -467,7 +462,7 @@ function run() {
                 }
                 return lastReport = {
                     date: new Date().toString(),
-                    errors: [...errors.values()],
+                    errors: [...errorTracker.list()],
                     tests: getGroupResult(rootGroup),
                     traverse: function (options: test.ResultTraverseOptions = {}) {
                         const opts = {
@@ -485,7 +480,7 @@ function run() {
 }
 
 export interface Tests {
-    (name: string, cb: TestCallback): void;
+    (name: string, cb: TestCallback, expect?: any): void;
     group(name: string, cb: TestCallback): void;
     before(cb: TestCallback): void;
     after(cb: TestCallback): void;
@@ -498,9 +493,6 @@ test.group = group;
 test.before = before;
 test.after = after;
 test.run = run;
-test.void = function (name: string, cb: TestCallback) {
-    test(name, ignoreResultValue(cb));
-};
 
 export namespace test {
     export interface TestsResult {
@@ -528,7 +520,7 @@ export namespace test {
     }
     export interface TestsTestResult extends TestsResultNode {
         passed: boolean;
-        error?: Error;
+        errors?: Error[];
         result?: any;
     }
 }
