@@ -20,5 +20,8 @@ test.run().then(result => {
                 t.errors.forEach(error => console.error(`${indent}${error.stack}`));
             }
         }
-    })
+    });
+    result.errors.forEach(error => {
+        console.error(error);
+    });
 });

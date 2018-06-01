@@ -1,36 +1,5 @@
 
 
-export type TestCallbackNoArgs = () => Promise<any> | any;
-export type TestCallbackResolve = (resolve: (x: any) => void) => any | Promise<any>;
-export type TestCallbackPromise = (
-    resolve: (x: any) => void,
-    reject: (err: Error | any) => void
-) => any | Promise<any>;
-export type TestCallback = TestCallbackNoArgs | TestCallbackPromise | TestCallbackResolve;
-
-const NodeTypeTest = 'test';
-const NodeTypeGroup = 'group';
-type NodeType = "test" | "group";
-
-export const RootGroupName = "[ROOT]";
-export const DeclarationStage = "declaration";
-export const ExecutionStage = "execution";
-export const DoneStage = "done";
-export type TestingStage = "declaration" | "execution" | "done";
-
-const rootGroup: GroupNode = {
-    children: {},
-    before: [],
-    after: [],
-    parent: null,
-    name: RootGroupName,
-    type: 'group'
-};
-
-let currentGroup = rootGroup;
-let currentTest: TestNode = null;
-let currentStage: TestingStage = "declaration";
-
 export interface RegisteredError extends Error {
     timestamp: number;
     index: number;
@@ -116,12 +85,12 @@ class ElapsedTimer {
     get isStarted() { return this.startedAt !== 0; }
     start() {
         if (this.isStarted)
-            throw new Error(`testnow: timer is already started.`);
+            throw new Error(`ElapsedTimer: timer is already started.`);
         this.startedAt = Date.now();
     }
     stop() {
         if (!this.isStarted)
-            throw new Error(`testnow: timer was not started.`);
+            throw new Error(`ElapsedTimer: timer was not started.`);
         const now = Date.now();
         const result = now - this.startedAt;
         this.startedAt = 0;
@@ -142,87 +111,6 @@ let defGroups = 0;
 let testDefinitionCompletePromise = new Promise((resolve, reject) => {
     testDefinitionComplete = resolve;
 });
-
-const Any = Symbol();
-
-namespace runCallback {
-    export interface Options {
-        expect?: any;
-        timeout?: number;
-    }
-}
-
-function assertExpectation(factual: any, expected: any) {
-    if (expected !== Any) {
-        if (factual !== expected) {
-            throw new Error(`Expectation failed: expected ${expected}, got: ${factual}`);
-        }
-    }
-    return factual;
-}
-
-function runCallback(cb: TestCallback, options: runCallback.Options = {}): Promise<any> {
-    let timeout = options.timeout || 20000;
-    let expect = ("expect" in options) ? options.expect : undefined;
-    let timeoutId: any = null;
-    return new Promise((resolve, reject) => {
-        timeoutId = setTimeout(() => {
-            timeoutId = null;
-            reject(new Error(`Timeout: ${timeout}`));
-        }, timeout);
-        if (cb.length)
-            (cb as TestCallbackPromise)(resolve, reject);
-        else
-            resolve((cb as TestCallbackNoArgs)());
-    }).catch(failure => {
-        const error = (failure instanceof Error) ? failure : new Error(`Error: ${failure}`);
-        return errorTracker.add(error);
-    }).then(result => {
-        if (timeoutId) {
-            clearTimeout(timeoutId);
-            timeoutId = null;
-        }
-        return assertExpectation(result, expect);
-    });;
-}
-
-namespace sequence {
-    export interface Options {
-        timeout?: number;
-        recover?: boolean;
-        onError?: (error: Error) => void;
-    }
-}
-/**
- * Executes sequence of possibly asynchronous callbacks
- * */
-function sequence(cbs: TestCallback[], options: sequence.Options = {}) {
-    const timeout = options.timeout || 20000;
-    const recover = options.recover || false;
-    const onError = options.onError || (() => undefined);
-
-    let queue = [...cbs];
-    return new Promise((resolve, reject) => {
-        function handleError(err: Error) {
-            const error = errorTracker.add(err);
-            onError(error);
-            if (recover) {
-                Promise.resolve().then(next).catch(handleError);
-            } else {
-                reject(error);
-            }
-        }
-        function next(prevResult?: any) {
-            if (!queue.length) {
-                resolve(true);
-            } else {
-                let cb = queue.shift();
-                runCallback(cb, { timeout }).then(next).catch(handleError);
-            }
-        };
-        Promise.resolve().then(next).catch(handleError);
-    });
-}
 
 function getCurrentGroup() {
     return currentGroup;
@@ -346,8 +234,8 @@ function runTest(testNode: TestNode) {
             currentTest.errors.push(errorTracker.add(cleanupError));
             currentTest.passed = false;
         }).then(() => {
-            testNode.elapsed = elapsedTimer.stop();
-            return true;
+            currentTest.elapsed = elapsedTimer.stop();
+            currentTest = null;
         });
     });
 }
@@ -479,50 +367,3 @@ function run() {
     return runPromise;
 }
 
-export interface Tests {
-    (name: string, cb: TestCallback, expect?: any): void;
-    group(name: string, cb: TestCallback): void;
-    before(cb: TestCallback): void;
-    after(cb: TestCallback): void;
-    run(): Promise<test.TestsResult>;
-    void(name: string, cb: TestCallback): void;
-}
-
-export let test: Tests = <Tests>declTest;
-test.group = group;
-test.before = before;
-test.after = after;
-test.run = run;
-
-export namespace test {
-    export interface TestsResult {
-        date: string;
-        errors: Error[];
-        tests: TestsGroupResult;
-        traverse(options?: ResultTraverseOptions): void;
-    }
-    export interface ResultTraverseOptions {
-        group?: (res: TestsGroupResult) => void;
-        test?: (res: TestsTestResult) => void;
-        groupsFirst?: boolean;
-    }
-    export interface TestsResultNode {
-        name: string;
-        path: string[];
-        elapsed: number;
-    }
-    export interface TestsGroupResult extends TestsResultNode {
-        passed: number;
-        failed: number;
-        total: number;
-        groups: TestsGroupResult[];
-        tests: TestsTestResult[];
-    }
-    export interface TestsTestResult extends TestsResultNode {
-        passed: boolean;
-        errors?: Error[];
-        result?: any;
-    }
-}
-
-export default test;
