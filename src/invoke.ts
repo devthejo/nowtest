@@ -1,21 +1,4 @@
 
-
-function assertExpectation(factual: any, expected: any) {
-    if (factual instanceof Error) {
-        throw factual;
-    }
-    if (expected !== invoke.Any) {
-        if (expected === invoke.Truthy && !factual) {
-            throw new Error(`Expectation failed: expected TRUTHY, got: ${factual}`);
-        } else if (expected === invoke.Falsy && !!factual) {
-            throw new Error(`Expectation failed: expected FALSY, got: ${factual}`);
-        } else if (factual !== expected) {
-            throw new Error(`Expectation failed: expected ${expected}, got: ${factual}`);
-        }
-    }
-    return factual;
-}
-
 function invoke(
     cb: invoke.Callback,
     options: invoke.Options = {}
@@ -51,7 +34,7 @@ function invoke(
             timeoutId = null;
         }
 
-        return assertExpectation(result, expect);
+        return invoke.assert(result, expect);
     });
 }
 
@@ -122,6 +105,22 @@ namespace invoke {
             };
             Promise.resolve().then(next).catch(handleError);
         });
+    }
+
+    export function assert(factual: any, expected: any) {
+        if (factual instanceof Error) {
+            throw factual;
+        }
+        if (expected !== invoke.Any) {
+            if (expected === invoke.Truthy && !factual) {
+                throw new Error(`Expectation failed: expected TRUTHY, got: ${factual}`);
+            } else if (expected === invoke.Falsy && !!factual) {
+                throw new Error(`Expectation failed: expected FALSY, got: ${factual}`);
+            } else if (factual !== expected) {
+                throw new Error(`Expectation failed: expected ${expected}, got: ${factual}`);
+            }
+        }
+        return factual;
     }
 }
 

@@ -2,13 +2,26 @@ import invoke from './invoke';
 import { IResult } from './result';
 export * from './result';
 
-export interface INode {
+export interface IErrorTracker {
+    add(error: Error): RegisteredError;
+    create(message: string): RegisteredError;
+    list(): RegisteredError[];
+    has(error: Error): boolean;
+    readonly count: number;
+}
+
+export interface INode extends IErrorsContainer {
     readonly name: string;
     readonly parent: IGroup;
     readonly isRoot: boolean;
     readonly fullName: string;
     readonly context: IContext;
-    readonly errors: IErrorTracker;
+    readonly status: NodeStatus;
+    readonly elapsed: number;
+    readonly passed: boolean;
+    readonly finished: boolean;
+    timeStart(): void;
+    timeEnd(): void;
 }
 
 export interface IGroup extends INode {
@@ -19,57 +32,43 @@ export interface IGroup extends INode {
     runBefores(): Promise<void>;
     runAfters(): Promise<void>;
     run(): Promise<void>;
-
 }
 
 export interface ITest extends INode {
-    readonly passed: boolean;
+    readonly result: any;
     run(): Promise<void>;
 }
 
-export interface RegisteredError extends Error {
-    timestamp: number;
-    index: number;
-    stage?: ContextStage;
-    nodeName?: string;
-    contextName?: string;
+export interface IErrorsContainer {
+    readonly errors: IErrorTracker;
 }
 
-export interface IErrorTracker {
-    add(error: Error): RegisteredError;
-    create(message: string): RegisteredError;
-    list(): RegisteredError[];
-    has(error: Error): boolean;
-    readonly count: number;
-}
+export type ContextStatus =
+    "definition" | "execution" | "results";
+export const Definition: ContextStatus = "definition";
+export const Execution: ContextStatus = "execution";
+export const Results: ContextStatus = "results";
 
-export type ContextStage =
-    "definition"
-    | "execution"
-    | "results";
-export const ContextDefinition: ContextStage = "definition";
-export const ContextExecution: ContextStage = "execution";
-export const ContextResults: ContextStage = "results";
+export type NodeStatus =
+    "definition" | "preparation" | "execution" | "cleanup" | "results";
+export const Preparation: NodeStatus = "preparation";
+export const Cleanup: NodeStatus = "cleanup";
 
-export type TestStage =
-    "definition"
-    | "preparation"
-    | "execution"
-    | "cleanup"
-    | "results";
-export const TestDefinitionStage: TestStage = "definition";
-export const TestPreparationStage: TestStage = "preparation";
-export const TestExecutionStage: TestStage = "execution";
-export const TestCleanupStage: TestStage = "cleanup";
-export const TestResultsStage: TestStage = "results";
 
 export interface IContext {
     readonly name: string;
-    stage: ContextStage;
-    rootGroup: IGroup;
-    currentGroup: IGroup;
-    currentTest: ITest;
+    readonly stage: ContextStatus;
+    readonly rootGroup: IGroup;
+    readonly currentGroup: IGroup;
+    readonly currentTest: ITest;
     readonly errors: IErrorTracker;
+
+    assertDefinitionStage(msg?: string): void;
+    assertExecutionStage(msg?: string): void;
+    assertResultsStage(msg?: string): void;
+
+    enqueueGroupDefinition(cb: invoke.Callback): void;
+    readonly definitionsDone: Promise<void>;
     getAPI(): ExternalAPI;
 }
 
