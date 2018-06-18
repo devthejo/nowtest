@@ -1,4 +1,3 @@
-
 function invoke(
     cb: invoke.Callback,
     options: invoke.Options = {}
@@ -12,20 +11,34 @@ function invoke(
             timeoutId = null;
             reject(new Error(`Timeout: ${timeout}`));
         }, timeout);
+        let cbReturned: any | Promise<any>;
         switch (cb.length) {
             case 0:
-                resolve((cb as invoke.CallbackNoArgs)());
+                cbReturned = (cb as invoke.CallbackNoArgs)();
+                if (cbReturned instanceof Promise) {
+                    cbReturned.then(resolve).catch(reject);
+                } else {
+                    resolve(cbReturned);
+                }
                 break;
             case 1:
-                (cb as invoke.CallbackResolve)(resolve);
-                break;
-            case 2:
-                (cb as invoke.CallbackPromise)(resolve, reject);
+                cbReturned = (cb as invoke.CallbackWithHandler)(
+                    invoke.createAsyncHandler(resolve)
+                );
+                // If a promise is returned - then passed aasync handler
+                // is used only as utility and real test completion depends
+                // on the returned promise.
+                if (cbReturned instanceof Promise) {
+                    cbReturned.then(resolve).catch(reject);
+                }
+                // Otherwise we expect the async operation to be resolved
+                // with an async handler call
                 break;
             default:
                 throw new Error(`Invalid callback provided: ${cb.toString()}`);
         }
     }).catch(failure => (failure instanceof Error)
+        // Turn all failures into an resolution with an error argument
         ? failure
         : new Error(`${failure}`)
     ).then(result => {
@@ -34,6 +47,8 @@ function invoke(
             timeoutId = null;
         }
 
+        // Rethrow errors, otherwise check the expectation, and if it fails -
+        // - throw an appropriate error too
         return invoke.assert(result, expect);
     });
 }
@@ -44,34 +59,48 @@ namespace invoke {
         timeout?: number;
     }
 
+    export interface AsyncHandler {
+        (result?: Error | any): void;
+        wrap(cb: Function): Function;
+    }
+
+    export function createAsyncHandler(resolve: (x?: any | Error) => void) {
+        let handler = function (res?: Error | any) {
+            resolve(res);
+        };
+        (handler as any).wrap = function (
+            cb: Function, options: WrapOptions = {}
+        ) {
+            const context = options.context || null;
+            return function (...args: any[]) {
+                let result: any;
+                try {
+                    result = cb.apply(context, args);
+                    return result;
+                } catch (err) {
+                    resolve(err);
+                }
+            }
+        }
+        return handler as AsyncHandler;
+    }
+
+    export interface WrapOptions {
+        context?: any;
+    }
+
     export type CallbackNoArgs =
         () => Promise<any> | any;
 
-    export type CallbackResolve =
-        (resolve: (x?: any) => void) => any | Promise<any>;
+    export type CallbackWithHandler =
+        (handler: AsyncHandler) => any | Promise<any>;
 
-    export type CallbackPromise =
-        (
-            resolve: (x?: any) => void,
-            reject: (err?: Error | any) => void
-        ) => any | Promise<any>;
-
-    export type Callback =
-        CallbackNoArgs
-        | CallbackPromise
-        | CallbackResolve;
+    export type Callback = CallbackNoArgs | CallbackWithHandler;
 
     export const Any = Symbol();
     export const Truthy = Symbol();
     export const Falsy = Symbol();
 
-    namespace sequence {
-        export interface Options {
-            timeout?: number;
-            recover?: boolean;
-            onError?: (error: Error) => void;
-        }
-    }
     /**
      * Executes sequence of possibly asynchronous callbacks
      * */
@@ -80,32 +109,39 @@ namespace invoke {
         options: sequence.Options = {}
     ) {
         const timeout = options.timeout || 20000;
-        const recover = options.recover || false;
-        const onError = options.onError || (() => undefined);
 
         let queue = [...cbs];
-        return new Promise<boolean>((resolve, reject) => {
-            let noFails = true;
-            function handleError(error: Error) {
-                noFails = false;
-                onError(error);
-                if (recover) {
-                    Promise.resolve().then(next).catch(handleError);
-                } else {
-                    reject(error);
-                }
-            }
-            function next(prevResult?: any) {
+        return new Promise<void>((resolve, reject) => {
+            function next() {
                 if (!queue.length) {
-                    resolve(noFails);
+                    resolve();
                 } else {
                     let cb = queue.shift();
-                    invoke(cb, { timeout }).then(next).catch(handleError);
+                    invoke(cb, { timeout }).then(next).catch(reject);
                 }
             };
-            Promise.resolve().then(next).catch(handleError);
+            Promise.resolve().then(next).catch(reject);
         });
     }
+
+    export namespace sequence {
+        export interface Options {
+            timeout?: number;
+        }
+
+        export function asCallback(
+            cbs: Callback[],
+            options?: sequence.Options
+        ): Callback {
+            return function () {
+                if (cbs.length) {
+                    return sequence(cbs, options);
+                }
+            }
+        }
+    }
+
+    
 
     export function assert(factual: any, expected: any) {
         if (factual instanceof Error) {

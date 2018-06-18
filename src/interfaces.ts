@@ -2,15 +2,7 @@ import invoke from './invoke';
 import { IResult } from './result';
 export * from './result';
 
-export interface IErrorTracker {
-    add(error: Error): RegisteredError;
-    create(message: string): RegisteredError;
-    list(): RegisteredError[];
-    has(error: Error): boolean;
-    readonly count: number;
-}
-
-export interface INode extends IErrorsContainer {
+export interface INode {
     readonly name: string;
     readonly parent: IGroup;
     readonly isRoot: boolean;
@@ -20,6 +12,7 @@ export interface INode extends IErrorsContainer {
     readonly elapsed: number;
     readonly passed: boolean;
     readonly finished: boolean;
+    readonly runCallback: invoke.Callback;
     timeStart(): void;
     timeEnd(): void;
 }
@@ -29,9 +22,12 @@ export interface IGroup extends INode {
     before(cb: invoke.Callback): void;
     after(cb: invoke.Callback): void;
     test(name: string, cb: invoke.Callback, expect?: any): void;
-    runBefores(): Promise<void>;
-    runAfters(): Promise<void>;
+    readonly beforesCallback: invoke.Callback;
+    readonly aftersCallback: invoke.Callback;
     run(): Promise<void>;
+    listTree(): IGroup[];
+    runBeforesStack(): Promise<void>;
+    runAftersStack(): Promise<void>;
 }
 
 export interface ITest extends INode {
@@ -39,20 +35,25 @@ export interface ITest extends INode {
     run(): Promise<void>;
 }
 
-export interface IErrorsContainer {
-    readonly errors: IErrorTracker;
-}
 
+export const Definition = "definition";
+export const Execution = "execution";
+export const Results = "results";
+export const Failed = "failed";
 export type ContextStatus =
-    "definition" | "execution" | "results";
-export const Definition: ContextStatus = "definition";
-export const Execution: ContextStatus = "execution";
-export const Results: ContextStatus = "results";
+    typeof Definition |
+    typeof Execution |
+    typeof Results |
+    typeof Failed;
 
+export const Preparation = "preparation";
+export const Cleanup = "cleanup";
 export type NodeStatus =
-    "definition" | "preparation" | "execution" | "cleanup" | "results";
-export const Preparation: NodeStatus = "preparation";
-export const Cleanup: NodeStatus = "cleanup";
+    typeof Definition |
+    typeof Execution |
+    typeof Results |
+    typeof Preparation |
+    typeof Cleanup;
 
 
 export interface IContext {
@@ -61,7 +62,6 @@ export interface IContext {
     readonly rootGroup: IGroup;
     readonly currentGroup: IGroup;
     readonly currentTest: ITest;
-    readonly errors: IErrorTracker;
 
     assertDefinitionStage(msg?: string): void;
     assertExecutionStage(msg?: string): void;
