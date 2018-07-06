@@ -72,10 +72,10 @@ namespace invoke {
             cb: Function, options: WrapOptions = {}
         ) {
             const context = options.context || null;
-            return function (...args: any[]) {
+            return function (this: any, ...args: any[]) {
                 let result: any;
                 try {
-                    result = cb.apply(context, args);
+                    result = cb.apply(context || this, args);
                     return result;
                 } catch (err) {
                     resolve(err);

@@ -1,10 +1,11 @@
 import test from "../index";
 
 import "./mySetImmediate";
+import util from "util";
 
 test.run().then(result => {
-    console.log("\nTESTS:", result.tests.failed ? "FAILED" : "PASSED");
-    result.traverse({
+    console.log(util.inspect(result, true, 10, true));
+    /*result.traverse({
         group(g) {
             const indent = "  ".repeat(g.path.length);
             console.log(`${indent}[ ${g.name} ]: (${g.passed}/${g.total}) T: ${g.elapsed} ms`);
@@ -20,8 +21,8 @@ test.run().then(result => {
                 t.errors.forEach(error => console.error(`${indent}${error.stack}`));
             }
         }
-    });
-    result.errors.forEach(error => {
+    });*/
+    /*result.errors.forEach(error => {
         console.error(error);
-    });
+    });*/
 });

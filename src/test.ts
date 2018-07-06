@@ -1,16 +1,19 @@
 import invoke from './invoke';
 import { ITest, IGroup, IContext } from './interfaces';
 import TNode from './node';
+import { IGroupResult, ITestResult } from './result';
 
-class TTest extends TNode implements ITest  {
-    private _result: any;
+class TTest extends TNode implements ITest {
     private expect: any;
     private cb: invoke.Callback;
-    get result() { return this._result; }
+    private executeSetup: invoke.Callback;
+    private executeTeardown: invoke.Callback;
 
     constructor(
+        beforesStack: invoke.Callback,
+        aftersStack: invoke.Callback,
         context: IContext,
-        parent: IGroup,
+        parent: IGroup & TNode,
         name: string,
         cb: invoke.Callback,
         expect: any = invoke.Any
@@ -18,26 +21,34 @@ class TTest extends TNode implements ITest  {
         super(context, parent, name);
         this.cb = cb;
         this.expect = expect;
+        this.executeSetup = beforesStack;
+        this.executeTeardown = aftersStack;
     }
 
-    private runTestCallback = ()=> {
-        return invoke(this.cb, { expect: this.expect }).then(result => {
-            this._result = result;
-        });
+    getResults(parent: IGroupResult = null): ITestResult {
+        return super.getResults(parent);
     }
 
-    run = () => {
+    private runTestCallback = () => {
+        return invoke(this.cb, { expect: this.expect });
+    }
+
+    protected runStart() {
+        this.context.currentTest = this;
+        return super.runStart();
+    }
+
+    protected runEnd() {
+        this.context.currentTest = null;
+        return super.runEnd();
+    }
+
+    protected runMain() {
         return invoke.sequence([
-            this.parent.runBeforesStack,
+            this.executeSetup,
             this.runTestCallback,
-            this.parent.runAftersStack
+            this.executeTeardown
         ]);
-    }
-
-    get runCallback() {
-        return () => {
-            return this.run();
-        }
     }
 }
 

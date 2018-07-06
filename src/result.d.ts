@@ -1,4 +1,3 @@
-
 /** Description of the results object returned by testnow.run() */
 export interface IResult {
     name?: string;
@@ -14,7 +13,6 @@ export interface IResult {
      * to traverse the whole results tree */
     traverse(options?: ResultTraverseOptions): void;
 }
-
 export interface ResultTraverseOptions {
     /** This callback is called for each group of the tree if provided */
     group?: (res: IGroupResult) => void;
@@ -29,7 +27,6 @@ export interface ResultTraverseOptions {
      * first and then sub-subgroup results etc. */
     groupsFirst?: boolean;
 }
-
 /** The whole results tree is composed of nodes sharing this interfaces */
 export interface IResultNode {
     /** Group or test name as provided by the user */
@@ -44,8 +41,6 @@ export interface IResultNode {
     passed?: boolean;
     executed?: boolean;
 }
-
-
 export interface IGroupResult extends IResultNode {
     /** Number of tests passed */
     passedCount: number;
@@ -57,29 +52,6 @@ export interface IGroupResult extends IResultNode {
     groups: IGroupResult[];
     tests: ITestResult[];
 }
-
 export interface ITestResult extends IResultNode {
 }
-
-export function traverse(
-    what: IGroupResult,
-    options: ResultTraverseOptions
-) {
-    let { test: cbTest, group: cbGroup, groupsFirst, all: cbAll } = options;
-    cbGroup = cbGroup || (() => undefined);
-    cbTest = cbTest || (() => undefined);
-    cbAll = cbAll || (() => undefined);
-    let onTest = (test: ITestResult) => {
-        cbAll(test);
-        cbTest(test);
-    };
-    let onGroup = (group: IGroupResult) => {
-        cbAll(group);
-        cbGroup(group);
-        traverse(group, options);
-    }
-
-    if (groupsFirst) what.groups.forEach(onGroup);
-    what.tests.forEach(onTest);
-    if (!groupsFirst) what.groups.forEach(onGroup);
-}
+export declare function traverse(what: IGroupResult, options: ResultTraverseOptions): void;
