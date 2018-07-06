@@ -6,9 +6,18 @@ Minimalistic testing framework
     npm install testnow
 ```
 
-This framework doesn't have any CLI, only programmatic API.
+This framework doesn't have any CLI, only programmatic API.  
+It's designed to be cross-platform and to be able to be
+integrated with any CICD / deployment tools.
 
-Setting up some tests:
+If you ever looked at 1.x - forget about it. 2.x is a completely rewritten
+and now has relatively clean design which is to stay.
+
+Currently only the most essential core functionality is implemented.
+A decent readme, docs and examples along with advanced features like
+disabling certain tests is coming... someday)
+
+## Setting up tests
 
 ```typescript
 import test from "testnow";
@@ -18,21 +27,27 @@ function mySetImmediate(cb: () => void) {
 }
 
 test.group("mySetImmediate", () => {
-    test("Executes callback", (resolve: (x: any) => void) =>
-        mySetImmediate(() => resolve(true)));
-    
-    test("May be cancelled with clearTimeout", (resolve, reject) => {
-        let timeoutId = mySetImmediate(() => reject(new Error(`Callback executed`)));
+    test("Executes callback", (end: test.Handler) =>
+        mySetImmediate(() => end()));
+
+    test("May be cancelled with clearTimeout", (end: test.Handler) => {
+        let timeoutId = mySetImmediate(
+            () => end(new Error(`Callback executed`))
+        );
         clearTimeout(timeoutId);
-        setTimeout(() => resolve(true), 100);
+        setTimeout(() => end(), 100);
     });
 });
-
 ```
 
-And running:
+## Executing tests
 ```typescript
+import test from "testnow";
+
+import "./mySetImmediate";
+import util from "util";
+
 test.run().then(result => {
-    console.log(result.report);
+    console.log(util.inspect(result, true, 10, true));
 });
 ```
