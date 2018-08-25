@@ -36,16 +36,18 @@ export interface IContext {
     assertResultsStage(msg?: string): void;
     enqueueDefinition(group: IGroup): void;
     onError(error: Error): void;
-    run(): Promise<void>;
+    run(options?: IRunOptions): Promise<void>;
     getResults(): IResult;
     getAPI(): ExternalAPI;
+}
+export interface IRunOptions {
 }
 export interface ExternalAPI {
     (name: string, cb: invoke.Callback, expect?: any): void;
     group(name: string, cb: invoke.Callback): void;
     before(cb: invoke.Callback): void;
     after(cb: invoke.Callback): void;
-    run(): Promise<IResult>;
+    run(options?: IRunOptions): Promise<IResult>;
     context(name: string): ExternalAPI;
     readonly Any: Symbol;
     readonly Truthy: Symbol;

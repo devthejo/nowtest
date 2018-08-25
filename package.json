@@ -5,8 +5,9 @@
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
-    "build": "tsc && tsc -p test",
-    "test": "npm run build ; node test/server"
+    "build": "tsc && tsc -p test && webpack",
+    "test": "npm run build ; node test/server",
+    "test-web": "npm run build ; xdg-open ./test/test.html"
   },
   "repository": {
     "type": "git",

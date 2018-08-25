@@ -3,6 +3,8 @@ export interface IResult {
     name?: string;
     /** Test execution date and time */
     date: string;
+    /** true if tests passed */
+    passed: boolean;
     /** If false tests weren't even started because definition failed */
     definitionsOk?: boolean;
     /** All errors raised during the tests execution */
@@ -14,10 +16,13 @@ export interface IResult {
     traverse(options?: ResultTraverseOptions): void;
 }
 export interface ResultTraverseOptions {
-    /** This callback is called for each group of the tree if provided */
+    /** This callback is called for each group of the tree, before handling the group */
     group?: (res: IGroupResult) => void;
-    /** This callback is called for each test leaf of the tree if provided */
+    /** This callback is called for each group of the tree, after handling the group */
+    groupEnd?: (res: IGroupResult) => void;
+    /** This callback is called for each test leaf of the tree */
     test?: (res: ITestResult) => void;
+    /** This callback for each test node(test or group) before anything else */
     all?: (res: IResultNode) => void;
     /** If that property is set to true - inside every group all subgroups
      * will be processed first and tests second. This means that all group
@@ -27,7 +32,7 @@ export interface ResultTraverseOptions {
      * first and then sub-subgroup results etc. */
     groupsFirst?: boolean;
 }
-/** The whole results tree is composed of nodes sharing this interfaces */
+/** The whole results tree is composed of nodes sharing this interface */
 export interface IResultNode {
     /** Group or test name as provided by the user */
     name: string;
@@ -55,3 +60,4 @@ export interface IGroupResult extends IResultNode {
 export interface ITestResult extends IResultNode {
 }
 export declare function traverse(what: IGroupResult, options: ResultTraverseOptions): void;
+export declare type IReporter = (results: IResult) => boolean;

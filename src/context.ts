@@ -1,4 +1,4 @@
-import { IContext, ExternalAPI, IGroup, ITest, INode } from "./interfaces";
+import { IContext, ExternalAPI, IGroup, ITest, INode, IRunOptions } from "./interfaces";
 import TGroup from './group';
 import invoke from './invoke';
 import { IResult, traverse, ResultTraverseOptions, ITestResult, IResultNode } from "./result";
@@ -108,7 +108,7 @@ class TContext implements IContext {
         });
     }
 
-    run() {
+    run(options: IRunOptions = {}) {
         this.assertDefinitionStage();
         return this.runDefinitions().then(() => {
             this.isDefining = false;
@@ -130,6 +130,7 @@ class TContext implements IContext {
         this.assertResultsStage();
         let results: IResult;
         results = {
+            passed: false,
             name: this.name,
             definitionsOk: this.isDefinitionsOk,
             date: new Date().toString(),
@@ -152,6 +153,7 @@ class TContext implements IContext {
         } else {
             results.errors = [...this.definitionErrors];
         }
+        results.passed = results.errors.length === 0;
         return results;
     }
 
@@ -174,22 +176,26 @@ class TContext implements IContext {
         iapiMethod.after = (cb: invoke.Callback) => {
             this.currentGroup.after(cb);
         }
-        iapiMethod.run = () => {
+        iapiMethod.run = (options?: IRunOptions) => {
             return Promise.resolve().then(() => {
-                return this.run().then(() => {
+                return this.run(options).then(() => {
                     return this.getResults();
                 })
             }).catch((error) => {
                 const res: IResult = {
+                    name: this.name,
                     errors: [error, ...this.definitionErrors, ...this.errors],
                     date: new Date().toString(),
-                    traverse: null
+                    traverse: null,
+                    passed: false
                 };
                 Reflect.defineProperty(res, "traverse", {
                     writable: true,
                     configurable: true,
                     enumerable: false,
-                    value: () => {}
+                    value: (options: ResultTraverseOptions) => {
+                        traverse(res.tests, options);
+                    }
                 });
                 return res;
             });

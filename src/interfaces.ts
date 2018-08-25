@@ -46,11 +46,15 @@ export interface IContext {
     enqueueDefinition(group: IGroup): void;
     onError(error: Error): void;
 
-    run(): Promise<void>;
+    run(options?: IRunOptions): Promise<void>;
 
     getResults(): IResult;
 
     getAPI(): ExternalAPI;
+}
+
+export interface IRunOptions {
+    
 }
 
 
@@ -60,7 +64,7 @@ export interface ExternalAPI {
     before(cb: invoke.Callback): void;
     after(cb: invoke.Callback): void;
 
-    run(): Promise<IResult>;
+    run(options?: IRunOptions): Promise<IResult>;
     context(name: string): ExternalAPI;
 
     readonly Any: Symbol;

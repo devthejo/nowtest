@@ -4,6 +4,8 @@ export interface IResult {
     name?: string;
     /** Test execution date and time */
     date: string;
+    /** true if tests passed */
+    passed: boolean;
     /** If false tests weren't even started because definition failed */
     definitionsOk?: boolean;
     /** All errors raised during the tests execution */
@@ -16,10 +18,13 @@ export interface IResult {
 }
 
 export interface ResultTraverseOptions {
-    /** This callback is called for each group of the tree if provided */
+    /** This callback is called for each group of the tree, before handling the group */
     group?: (res: IGroupResult) => void;
-    /** This callback is called for each test leaf of the tree if provided */
+    /** This callback is called for each group of the tree, after handling the group */
+    groupEnd?: (res: IGroupResult) => void;
+    /** This callback is called for each test leaf of the tree */
     test?: (res: ITestResult) => void;
+    /** This callback for each test node(test or group) before anything else */
     all?: (res: IResultNode) => void;
     /** If that property is set to true - inside every group all subgroups
      * will be processed first and tests second. This means that all group
@@ -30,7 +35,7 @@ export interface ResultTraverseOptions {
     groupsFirst?: boolean;
 }
 
-/** The whole results tree is composed of nodes sharing this interfaces */
+/** The whole results tree is composed of nodes sharing this interface */
 export interface IResultNode {
     /** Group or test name as provided by the user */
     name: string;
@@ -65,8 +70,9 @@ export function traverse(
     what: IGroupResult,
     options: ResultTraverseOptions
 ) {
-    let { test: cbTest, group: cbGroup, groupsFirst, all: cbAll } = options;
+    let { test: cbTest, group: cbGroup, groupEnd: cbGroupEnd, groupsFirst, all: cbAll } = options;
     cbGroup = cbGroup || (() => undefined);
+    cbGroupEnd = cbGroupEnd || (() => undefined);
     cbTest = cbTest || (() => undefined);
     cbAll = cbAll || (() => undefined);
     let onTest = (test: ITestResult) => {
@@ -77,9 +83,12 @@ export function traverse(
         cbAll(group);
         cbGroup(group);
         traverse(group, options);
+        cbGroupEnd(group);
     }
 
     if (groupsFirst) what.groups.forEach(onGroup);
     what.tests.forEach(onTest);
     if (!groupsFirst) what.groups.forEach(onGroup);
 }
+
+export type IReporter = (results: IResult) => boolean;

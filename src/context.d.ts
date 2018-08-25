@@ -1,4 +1,4 @@
-import { IContext, ExternalAPI, IGroup, ITest } from "./interfaces";
+import { IContext, ExternalAPI, IGroup, ITest, IRunOptions } from "./interfaces";
 import { IResult } from "./result";
 declare class TContext implements IContext {
     readonly name: string;
@@ -23,9 +23,9 @@ declare class TContext implements IContext {
     private lastDefinedPromise;
     private definitionFinished;
     enqueueDefinition(grp: IGroup): void;
-    private runDefinitions;
-    private runTests;
-    run(): Promise<void>;
+    private runDefinitions();
+    private runTests();
+    run(options?: IRunOptions): Promise<void>;
     getResults(): IResult;
     getAPI(): ExternalAPI;
 }
