@@ -72,7 +72,7 @@ test.run().then(result => {
 ### browser
 
 ```typescript
-import test, { reporter } from ".";
+import test, { reporter } from "testnow";
 
 window.onload = () => {
     test.run().then(result => {
