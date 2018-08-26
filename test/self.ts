@@ -5,9 +5,7 @@ test.group("TestNow", () => {
     test.group("subgroup", () => {
         test("simple test in subgroup with a callback doing nothing is ok", () => { });
         test.group("subsubgroup", () => {
-            test("simple test in subsubgroup with a callback doing nothing is ok", () => { });
-
-
+            test("simple test in subsubgroup with a callback doing nothing is ok", () => {});
         });
     });
 });
