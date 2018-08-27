@@ -3,14 +3,19 @@ import { IResult, IReporter } from "..";
 function logTests(results: IResult) {
     results.traverse({
         test(result) {
-            console.log(`${"  ".repeat(result.nestLevel)}- ${
-                result.name
-                }: ${result.passed ? "PASSED" : "FAILED"} (in ${result.elapsed} ms)`);
+            if (!result.skipped) {
+                console.log(`${"  ".repeat(result.nestLevel)}- ${
+                    result.name
+                    }: ${result.passed ? "PASSED" : "FAILED"} (in ${result.elapsed} ms)`);
+            }
         },
         group(result) {
-            console.log(`${"  ".repeat(result.nestLevel)} [ ${
-                result.name
-                } ] (${result.passedCount}/${result.totalCount})`);
+            if (!result.skipped) {
+                console.log(`${"  ".repeat(result.nestLevel)} [ ${
+                    result.name
+                    } ] (${result.passedCount}/${result.totalCount})`);
+            }
+            return result.skipped;
         }
     });
 }

@@ -14,7 +14,7 @@ export interface INode {
     readonly errors: Error[];
     readonly executed: boolean;
     
-    run(): Promise<void>;
+    run(options: IRunOptions): Promise<void>;
     getResults(parent?: IGroupResult): IResultNode;
 }
 
@@ -44,7 +44,7 @@ export interface IContext {
     assertResultsStage(msg?: string): void;
 
     enqueueDefinition(group: IGroup): void;
-    onError(error: Error): void;
+    onError(error: Error, options: IRunOptions): void;
 
     run(options?: IRunOptions): Promise<void>;
 
@@ -54,7 +54,8 @@ export interface IContext {
 }
 
 export interface IRunOptions {
-    
+    only?: RegExp;
+    skip?: RegExp;
 }
 
 

@@ -60,7 +60,7 @@ class TContext implements IContext {
         );
     }
 
-    onError = (error: Error) => {
+    onError = (error: Error, options: IRunOptions) => {
         if (this.isDefining) {
             this.definitionErrors.push(error);
         } else {
@@ -92,7 +92,7 @@ class TContext implements IContext {
         this.lastDefinedPromise = thisGroupDefinedPromise;
     }
 
-    private runDefinitions() {
+    private runDefinitions(options: IRunOptions) {
         return Promise.resolve().then(() => {
             this.definitionStarted.resolve();
             return this.definitionFinished.promise;
@@ -100,21 +100,21 @@ class TContext implements IContext {
             this.definitionsWereExecuted = true;
         });
     }
-    private runTests() {
+    private runTests(options: IRunOptions) {
         return Promise.resolve().then(() => {
             this.currentGroup = this.rootGroup;
             this.currentTest = null;
-            return this.rootGroup.run();
+            return this.rootGroup.run(options);
         });
     }
 
     run(options: IRunOptions = {}) {
         this.assertDefinitionStage();
-        return this.runDefinitions().then(() => {
+        return this.runDefinitions(options).then(() => {
             this.isDefining = false;
             if (this.isDefinitionsOk) {
                 this.isExecuting = true;
-                return this.runTests().then(() => {
+                return this.runTests(options).then(() => {
                     this.isExecuting = false;
                     this.isFinished = true;
                 });

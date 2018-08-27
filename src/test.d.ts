@@ -1,5 +1,5 @@
 import invoke from './invoke';
-import { ITest, IGroup, IContext } from './interfaces';
+import { ITest, IGroup, IContext, IRunOptions } from './interfaces';
 import TNode from './node';
 import { IGroupResult, ITestResult } from './result';
 declare class TTest extends TNode implements ITest {
@@ -10,8 +10,8 @@ declare class TTest extends TNode implements ITest {
     constructor(beforesStack: invoke.Callback, aftersStack: invoke.Callback, context: IContext, parent: IGroup & TNode, name: string, cb: invoke.Callback, expect?: any);
     getResults(parent?: IGroupResult): ITestResult;
     private runTestCallback;
-    protected runStart(): void;
-    protected runEnd(): void;
-    protected runMain(): Promise<void>;
+    protected runStart(options: IRunOptions): void;
+    protected runEnd(options: IRunOptions): void;
+    protected runMain(options: IRunOptions): Promise<void>;
 }
 export default TTest;

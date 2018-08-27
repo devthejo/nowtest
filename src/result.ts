@@ -48,6 +48,7 @@ export interface IResultNode {
     errors?: Error[];
     passed?: boolean;
     executed?: boolean;
+    skipped?: boolean;
 }
 
 
@@ -81,8 +82,9 @@ export function traverse(
     };
     let onGroup = (group: IGroupResult) => {
         cbAll(group);
-        cbGroup(group);
-        traverse(group, options);
+        if (!cbGroup(group)) {
+            traverse(group, options);
+        }
         cbGroupEnd(group);
     }
 

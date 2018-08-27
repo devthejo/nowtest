@@ -18,13 +18,13 @@ declare class TContext implements IContext {
     assertDefinitionStage(msg?: string): void;
     assertExecutionStage(msg?: string): void;
     assertResultsStage(msg?: string): void;
-    onError: (error: Error) => void;
+    onError: (error: Error, options: IRunOptions) => void;
     private definitionStarted;
     private lastDefinedPromise;
     private definitionFinished;
     enqueueDefinition(grp: IGroup): void;
-    private runDefinitions();
-    private runTests();
+    private runDefinitions(options);
+    private runTests(options);
     run(options?: IRunOptions): Promise<void>;
     getResults(): IResult;
     getAPI(): ExternalAPI;

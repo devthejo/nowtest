@@ -1,5 +1,5 @@
 import invoke from './invoke';
-import { ITest, IGroup, INode, IContext } from './interfaces';
+import { ITest, IGroup, INode, IContext, IRunOptions } from './interfaces';
 import TNode from './node';
 import TTest from './test';
 import { IGroupResult } from './result';
@@ -77,7 +77,7 @@ class TGroup extends TNode implements IGroup {
         return results;
     }
 
-    protected runStart() {
+    protected runStart(options: IRunOptions) {
         this.context.assertExecutionStage();
         if ((this.isRoot && this.context.currentGroup === this) || (
             this.context.currentGroup === this.parent
@@ -86,16 +86,16 @@ class TGroup extends TNode implements IGroup {
         } else {
             throw new Error(`Incorrect test tree traversal`);
         }
-        return super.runStart();
+        return super.runStart(options);
     }
 
-    protected runEnd() {
+    protected runEnd(options: IRunOptions) {
         this.context.currentGroup = this.parent;
-        return super.runEnd();
+        return super.runEnd(options);
     }
 
-    protected runMain() {
-        return invoke.sequence(this.children.map(inode => inode.run));
+    protected runMain(options: IRunOptions) {
+        return invoke.sequence(this.children.map(inode => () => inode.run(options)));
     }
 
     protected get ownBeforesCallback() {

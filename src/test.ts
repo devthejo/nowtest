@@ -1,5 +1,5 @@
 import invoke from './invoke';
-import { ITest, IGroup, IContext } from './interfaces';
+import { ITest, IGroup, IContext, IRunOptions } from './interfaces';
 import TNode from './node';
 import { IGroupResult, ITestResult } from './result';
 
@@ -33,17 +33,17 @@ class TTest extends TNode implements ITest {
         return invoke(this.cb, { expect: this.expect });
     }
 
-    protected runStart() {
+    protected runStart(options: IRunOptions) {
         this.context.currentTest = this;
-        return super.runStart();
+        return super.runStart(options);
     }
 
-    protected runEnd() {
+    protected runEnd(options: IRunOptions) {
         this.context.currentTest = null;
-        return super.runEnd();
+        return super.runEnd(options);
     }
 
-    protected runMain() {
+    protected runMain(options: IRunOptions) {
         return invoke.sequence([
             this.executeSetup,
             this.runTestCallback,

@@ -51,14 +51,19 @@ function createReporter(options: createReporter.Options = {}): IReporter {
         outputHTML += `<ul>`;
         results.traverse({
             test(result) {
-                outputHTML += `<li class="testnow-node testnow-test"> <span class="testnow-title">${result.name}</span> <span class="testnow-result testnow-${result.passed ? `passed">PASSED` : `failed">FAILED`} </span> <span class="testnow-elapsed"> ${result.elapsed} ms</span></li>`;
+                if (!result.skipped)
+                    outputHTML += `<li class="testnow-node testnow-test"> <span class="testnow-title">${result.name}</span> <span class="testnow-result testnow-${result.passed ? `passed">PASSED` : `failed">FAILED`} </span> <span class="testnow-elapsed"> ${result.elapsed} ms</span></li>`;
             },
             group(result) {
-                outputHTML += `<li class="testnow-node testnow-group"> <span class="testnow-title">${result.name}</span> <span class="testnow-result testnow-${result.passed ? `passed">PASSED` : `failed">FAILED`} </span> <span class="testnow-elapsed"> ${result.elapsed} ms</span><span class="testnow-count">(${result.passedCount}/${result.totalCount})</span>`;
-                outputHTML += `<ul>`
+                if (!result.skipped) {
+                    outputHTML += `<li class="testnow-node testnow-group"> <span class="testnow-title">${result.name}</span> <span class="testnow-result testnow-${result.passed ? `passed">PASSED` : `failed">FAILED`} </span> <span class="testnow-elapsed"> ${result.elapsed} ms</span><span class="testnow-count">(${result.passedCount}/${result.totalCount})</span>`;
+                    outputHTML += `<ul>`;
+                }
+                return result.skipped;
             },
-            groupEnd() {
-                outputHTML += "</ul></li>";
+            groupEnd(result) {
+                if (!result.skipped)
+                    outputHTML += "</ul></li>";
             }
         });
         outputHTML += `</ul>`;

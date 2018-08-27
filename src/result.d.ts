@@ -45,6 +45,7 @@ export interface IResultNode {
     errors?: Error[];
     passed?: boolean;
     executed?: boolean;
+    skipped?: boolean;
 }
 export interface IGroupResult extends IResultNode {
     /** Number of tests passed */
