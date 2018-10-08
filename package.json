@@ -1,6 +1,6 @@
 {
   "name": "testnow",
-  "version": "2.0.8",
+  "version": "2.0.9",
   "description": "Minimalistic testing framework designed for writing inline tests",
   "main": "index.js",
   "types": "index.d.ts",
