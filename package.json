@@ -35,7 +35,9 @@
     "webpack-cli": "^2.1.3"
   },
   "dependencies": {
+    "@types/json-stringify-safe": "^5.0.0",
     "fast-equals": "^1.6.1",
+    "json-stringify-safe": "^5.0.1",
     "npdefer": "^1.0.5"
   }
 }

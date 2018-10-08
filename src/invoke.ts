@@ -1,4 +1,9 @@
 import { deepEqual } from "fast-equals";
+import _jss from "json-stringify-safe";
+
+function jss(x: any) {
+  return _jss(x, null, 2);
+}
 
 function invoke(
   cb: invoke.Callback,
@@ -166,16 +171,20 @@ namespace invoke {
     }
     if (expected !== invoke.Any) {
       if (expected === invoke.Truthy && !factual) {
-        throw new Error(`Expectation failed: expected TRUTHY, got: ${factual}`);
+        throw new Error(
+          `Expectation failed: expected TRUTHY, got: ${jss(factual)}`
+        );
       } else if (expected === invoke.Falsy && !!factual) {
-        throw new Error(`Expectation failed: expected FALSY, got: ${factual}`);
+        throw new Error(
+          `Expectation failed: expected FALSY, got: ${jss(factual)}`
+        );
       } else if (expected instanceof DeepExpect && !expected.test(factual)) {
         throw new Error(
-          `Expectation failed: expected ${expected}, got: ${factual}`
+          `Expectation failed: expected ${jss(expected)}, got: ${jss(factual)}`
         );
       } else if (factual !== expected) {
         throw new Error(
-          `Expectation failed: expected ${expected}, got: ${factual}`
+          `Expectation failed: expected ${jss(expected)}, got: ${jss(factual)}`
         );
       }
     }
