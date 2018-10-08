@@ -23,8 +23,8 @@ declare class TContext implements IContext {
     private lastDefinedPromise;
     private definitionFinished;
     enqueueDefinition(grp: IGroup): void;
-    private runDefinitions(options);
-    private runTests(options);
+    private runDefinitions;
+    private runTests;
     run(options?: IRunOptions): Promise<void>;
     getResults(): IResult;
     getAPI(): ExternalAPI;

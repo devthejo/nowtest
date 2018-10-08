@@ -26,15 +26,16 @@
   "homepage": "https://github.com/hyperkot/testnow#readme",
   "devDependencies": {
     "@types/source-map-support": "^0.4.0",
-    "source-map-support": "^0.5.6",
-    "webpack": "^4.8.3",
-    "webpack-cli": "^2.1.3",
     "babel-core": "^6.26.3",
     "babel-loader": "^7.1.4",
     "babel-preset-env": "^1.7.0",
-    "uglifyjs-webpack-plugin": "^1.2.5"
+    "source-map-support": "^0.5.6",
+    "uglifyjs-webpack-plugin": "^1.2.5",
+    "webpack": "^4.8.3",
+    "webpack-cli": "^2.1.3"
   },
   "dependencies": {
+    "fast-equals": "^1.6.1",
     "npdefer": "^1.0.5"
   }
 }

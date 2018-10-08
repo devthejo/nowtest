@@ -30,7 +30,11 @@ function createReporter(options: createReporter.Options = {}): IReporter {
             logTests(results);
         } else {
             console.log(`${results.name} tests failed!!`);
-            logTests(results);
+            if (results.definitionsOk) {
+              logTests(results);
+            } else {
+              console.log(`Definitions failed!`);
+            }
             console.log(`=== ${results.errors.length} Errors:`);
             results.errors.forEach((error: Error, i: number) => {
                 console.log(`--- ${i}. ${error.stack}`);
