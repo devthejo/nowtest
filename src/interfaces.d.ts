@@ -1,6 +1,6 @@
-import invoke from './invoke';
-import { IResult, IGroupResult, IResultNode, ITestResult } from './result';
-export * from './result';
+import invoke from "./invoke";
+import { IResult, IGroupResult, IResultNode, ITestResult } from "./result";
+export * from "./result";
 export interface INode {
     readonly name: string;
     readonly parent: IGroup;
@@ -54,4 +54,5 @@ export interface ExternalAPI {
     readonly Any: Symbol;
     readonly Truthy: Symbol;
     readonly Falsy: Symbol;
+    readonly Deep: (x: any) => any;
 }

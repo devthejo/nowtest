@@ -165,7 +165,8 @@ class TContext implements IContext {
         Object.assign(iapiMethod, {
             Falsy: invoke.Falsy,
             Truthy: invoke.Truthy,
-            Any: invoke.Any
+            Any: invoke.Any,
+            Deep: invoke.Deep
         });
         iapiMethod.group = (name: string, cb: invoke.Callback) => {
             this.currentGroup.group(name, cb);

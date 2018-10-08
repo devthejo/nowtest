@@ -17,6 +17,7 @@ export {
     IResultNode,
     IReporter,
     IRunOptions,
-    AsyncHandler
+    AsyncHandler,
+    invoke
 }
 
