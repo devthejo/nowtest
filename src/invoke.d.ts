@@ -1,6 +1,6 @@
 declare function invoke(cb: invoke.Callback, options?: invoke.Options): Promise<any>;
 class Expect {
-    protected expect: any;
+    expect: any;
     constructor(expect: any);
     test(value: any): boolean;
 }

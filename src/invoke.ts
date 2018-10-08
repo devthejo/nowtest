@@ -65,7 +65,7 @@ function invoke(
 }
 
 class Expect {
-  constructor(protected expect: any) {}
+  constructor(public expect: any) {}
   test(value: any) {
     return value === this.expect;
   }
@@ -180,7 +180,9 @@ namespace invoke {
         );
       } else if (expected instanceof DeepExpect && !expected.test(factual)) {
         throw new Error(
-          `Expectation failed: expected ${jss(expected)}, got: ${jss(factual)}`
+          `Expectation failed: expected ${jss(expected.expect)}, got: ${jss(
+            factual
+          )}`
         );
       } else if (factual !== expected) {
         throw new Error(
