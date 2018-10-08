@@ -64,19 +64,6 @@ function invoke(
     });
 }
 
-class Expect {
-  constructor(public expect: any) {}
-  test(value: any) {
-    return value === this.expect;
-  }
-}
-
-class DeepExpect extends Expect {
-  test(value: any) {
-    return deepEqual(value, this.expect);
-  }
-}
-
 namespace invoke {
   export interface Options {
     expect?: any;
@@ -122,7 +109,11 @@ namespace invoke {
   export const Any = Symbol();
   export const Truthy = Symbol();
   export const Falsy = Symbol();
-  export const Deep = (x: any) => new DeepExpect(x);
+  export const Deep = (x: any) => {
+    const fn: any = (v: any) => deepEqual(x, v);
+    fn.expect = x;
+    return fn;
+  };
 
   /**
    * Executes sequence of possibly asynchronous callbacks
@@ -170,24 +161,38 @@ namespace invoke {
       throw factual;
     }
     if (expected !== invoke.Any) {
-      if (expected === invoke.Truthy && !factual) {
-        throw new Error(
-          `Expectation failed: expected TRUTHY, got: ${jss(factual)}`
-        );
-      } else if (expected === invoke.Falsy && !!factual) {
-        throw new Error(
-          `Expectation failed: expected FALSY, got: ${jss(factual)}`
-        );
-      } else if (expected instanceof DeepExpect && !expected.test(factual)) {
-        throw new Error(
-          `Expectation failed: expected ${jss(expected.expect)}, got: ${jss(
-            factual
-          )}`
-        );
-      } else if (factual !== expected) {
-        throw new Error(
-          `Expectation failed: expected ${jss(expected)}, got: ${jss(factual)}`
-        );
+      if (expected === invoke.Truthy) {
+        if (!factual) {
+          throw new Error(
+            `Expectation failed: expected TRUTHY, got: ${jss(factual)}`
+          );
+        }
+      } else {
+        if (expected === invoke.Falsy) {
+          if (!!factual) {
+            throw new Error(
+              `Expectation failed: expected FALSY, got: ${jss(factual)}`
+            );
+          }
+        } else {
+          if (typeof expected === "function" && expected.expect) {
+            if (!expected(factual)) {
+              throw new Error(
+                `Expectation failed: expected ${jss(
+                  expected.expect
+                )}, got: ${jss(factual)}`
+              );
+            }
+          } else {
+            if (factual !== expected) {
+              throw new Error(
+                `Expectation failed: expected ${jss(expected)}, got: ${jss(
+                  factual
+                )}`
+              );
+            }
+          }
+        }
       }
     }
     return factual;

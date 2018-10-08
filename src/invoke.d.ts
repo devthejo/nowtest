@@ -1,12 +1,4 @@
 declare function invoke(cb: invoke.Callback, options?: invoke.Options): Promise<any>;
-class Expect {
-    expect: any;
-    constructor(expect: any);
-    test(value: any): boolean;
-}
-class DeepExpect extends Expect {
-    test(value: any): boolean;
-}
 declare namespace invoke {
     interface Options {
         expect?: any;
@@ -26,7 +18,7 @@ declare namespace invoke {
     const Any: unique symbol;
     const Truthy: unique symbol;
     const Falsy: unique symbol;
-    const Deep: (x: any) => DeepExpect;
+    const Deep: (x: any) => any;
     /**
      * Executes sequence of possibly asynchronous callbacks
      * */
