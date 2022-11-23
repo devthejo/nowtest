@@ -1,11 +1,9 @@
-const TContext = require("./src/context");
+const TContext = require("./src/context")
 
-const reporter = require("./src/reporter");
+const reporter = require("./src/reporter")
 
-const initialContext = new TContext("Tests");
-const testNow = initialContext.getAPI();
-
-module.exports = {
-    test: testNow,
-    reporter
+module.exports = (options) => {
+  const context = new TContext("Tests", options)
+  return context.getAPI()
 }
+module.exports.reporter = reporter

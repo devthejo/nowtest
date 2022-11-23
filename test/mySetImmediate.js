@@ -1,4 +1,4 @@
-const {test} = require("..");
+const {test} = require(".");
 
 function mySetImmediate(cb) {
     return setTimeout(cb, 0);

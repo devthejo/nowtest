@@ -1,48 +1,51 @@
-const invoke = require('./invoke');
-const TNode = require('./node');
+const invoke = require("./invoke")
+const TNode = require("./node")
 
 class TTest extends TNode {
-    constructor(
-        beforesStack,
-        aftersStack,
-        context,
-        parent,
-        name,
-        cb,
-        expect = invoke.Any
-    ) {
-        super(context, parent, name);
-        this.cb = cb;
-        this.expect = expect;
-        this.executeSetup = beforesStack;
-        this.executeTeardown = aftersStack;
-    }
+  constructor(
+    beforesStack,
+    aftersStack,
+    context,
+    parent,
+    name,
+    cb,
+    expect = invoke.Any
+  ) {
+    super(context, parent, name)
+    this.cb = cb
+    this.expect = expect
+    this.executeSetup = beforesStack
+    this.executeTeardown = aftersStack
+  }
 
-    getResults(parent = null) {
-        return super.getResults(parent);
-    }
+  getResults(parent = null) {
+    return super.getResults(parent)
+  }
 
-    runTestCallback = () => {
-        return invoke.invoke(this.cb, { expect: this.expect });
-    }
+  runTestCallback = (options = {}) => {
+    invoke.invoke(this.cb, {
+      ...this.context.options,
+      ...options,
+      expect: this.expect,
+    })
+  }
 
-    runStart(options) {
-        this.context.currentTest = this;
-        return super.runStart(options);
-    }
+  runStart() {
+    this.context.currentTest = this
+    return super.runStart()
+  }
 
-    runEnd(options) {
-        this.context.currentTest = null;
-        return super.runEnd(options);
-    }
+  runEnd() {
+    this.context.currentTest = null
+    return super.runEnd()
+  }
 
-    runMain(options) {
-        return invoke.sequence([
-            this.executeSetup,
-            this.runTestCallback,
-            this.executeTeardown
-        ]);
-    }
+  runMain(options) {
+    return invoke.sequence(
+      [this.executeSetup, this.runTestCallback, this.executeTeardown],
+      { ...this.context.options, ...options }
+    )
+  }
 }
 
-module.exports = TTest;
+module.exports = TTest

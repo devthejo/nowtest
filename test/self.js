@@ -1,4 +1,4 @@
-const {test} = require("..");
+const {test} = require(".");
 
 test.group("TestNow", () => {
     test("simple test with a callback doing nothing is ok", () => { });

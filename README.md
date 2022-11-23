@@ -15,7 +15,9 @@ integrated with any build / CICD / deployment tools.
 ## Setting up / describing tests
 
 ```js
-const {test} = require("nowtest");
+const nowtest = require("nowtest");
+
+const test = nowtest()
 
 function mySetImmediate(cb: () => void) {
     return setTimeout(cb, 0);
@@ -39,7 +41,9 @@ test.group("mySetImmediate", () => {
 ### nodejs
 
 ```js
-const {test} = require("nowtest");
+const nowtest = require("nowtest");
+
+const test = nowtest()
 
 require("./mySetImmediate");
 const util  = require("util");
@@ -60,7 +64,8 @@ We could rewrite the above example using a simple built-in reporter which just l
 to the console:
 
 ```js
-const {test, reporter}  = require("nowtest");
+const nowtest  = require("nowtest");
+const {reporter}  = nowtest;
 
 require("./mySetImmediate");
 

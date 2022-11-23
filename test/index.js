@@ -1,9 +1,11 @@
-const {test, reporter} = require("..");
+const nowtest = require("..");
+
+const test = nowtest()
+
+module.exports = {
+  test
+};
 
 require("./self");
 require("./mySetImmediate");
 
-module.exports = {
-  reporter,
-  test
-};
