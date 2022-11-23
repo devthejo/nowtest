@@ -1,5 +1,7 @@
 class ElapsedTimer {
-    private startedAt: number = 0;
+    constructor(){
+        this.startedAt = 0;
+    }
     get isStarted() { return this.startedAt !== 0; }
     start() {
         if (this.isStarted)
@@ -16,4 +18,4 @@ class ElapsedTimer {
     }
 }
 
-export default ElapsedTimer;
+module.exports = ElapsedTimer;

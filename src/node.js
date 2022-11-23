@@ -1,22 +1,26 @@
-import { INode, IGroup, IContext } from './interfaces';
+const ElapsedTimer = require('./elapsed-timer');
 
-import ElapsedTimer from './elapsed-timer';
-import { IGroupResult, IResultNode } from './result';
-import { IRunOptions } from '.';
+const FullNameDelimiter = '/';
 
-class TNode implements INode {
-    private _name: string;
-    private _parent: IGroup & TNode;
-    private _context: IContext;
-    protected _elapsedTimer: ElapsedTimer;
+class TNode {
 
-    protected _finished: boolean = false;
-    protected _elapsed: number = 0;
-    protected _executed: boolean = false;
-    protected _skipped: boolean = false;
+    constructor(context, parent, name){
+        this._finished = false;
+        this._elapsed = 0;
+        this._executed = false;
+        this._skipped = false;
+        this.errors = [];
 
-    readonly errors: Error[] = [];
+        this._context = context;
+        this._parent = parent;
+        this._name = name;
+        this._elapsedTimer = new ElapsedTimer();
 
+        if (!this.isRoot && this.context !== this.parent.context) {
+            throw new Error(`Invalid context in ${this.name}`);
+        }
+    }
+    
     get name() { return this._name; }
     get parent() { return this._parent; }
     get isRoot() { return this._parent === null; }
@@ -27,33 +31,21 @@ class TNode implements INode {
     get executed() { return this._executed; }
     get skipped() { return this._skipped; }
 
-    get fullName(): string {
+    get fullName() {
         if (this.isRoot) {
             return this.name;
         } else {
             return `${this.parent.fullName}${
-                TNode.FullNameDelimiter
+                FullNameDelimiter
                 }${this.name}`;
         }
     }
-
-    constructor(context: IContext, parent: IGroup & TNode, name: string) {
-        this._context = context;
-        this._parent = parent;
-        this._name = name;
-        this._elapsedTimer = new ElapsedTimer();
-
-        if (!this.isRoot && this.context !== this.parent.context) {
-            throw new Error(`Invalid context in ${this.name}`);
-        }
-    }
-
     skip = () => {
         this._skipped = true;
         return Promise.resolve();
     }
 
-    run = (options: IRunOptions) => {
+    run = (options) => {
         if ((options.skip && options.skip.test(this.fullName)) || (options.only && !options.only.test(this.fullName))) {
             return this.skip();
         } else {
@@ -65,7 +57,7 @@ class TNode implements INode {
         }
     };
 
-    getResults(parent: IGroupResult = null): IResultNode {
+    getResults(parent = null) {
         return {
             name: this.name,
             fullName: this.fullName,
@@ -79,12 +71,12 @@ class TNode implements INode {
         };
     }
 
-    protected runStart(options: IRunOptions) {
+    runStart(options) {
         this._elapsedTimer.start();
         this._executed = true;
     }
 
-    protected onError(error: Error, options: IRunOptions) {
+    onError(error, options) {
         this.errors.push(error);
         if (this.isRoot) {
             this.context.onError(error, options)
@@ -93,18 +85,14 @@ class TNode implements INode {
         }
     }
 
-    protected runMain(options: IRunOptions) {
+    runMain(options) {
 
     }
 
-    protected runEnd(options: IRunOptions) {
+    runEnd(options) {
         this._elapsed = this._elapsedTimer.stop();
         this._finished = true;
     }
 }
 
-namespace TNode {
-    export const FullNameDelimiter = '/';
-}
-
-export default TNode;
+module.exports = TNode;

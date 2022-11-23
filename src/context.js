@@ -1,37 +1,12 @@
-import { IContext, ExternalAPI, IGroup, ITest, INode, IRunOptions } from "./interfaces";
-import TGroup from './group';
-import invoke from './invoke';
-import { IResult, traverse, ResultTraverseOptions, ITestResult, IResultNode } from "./result";
-import TTest from './test';
+const TGroup = require('./group');
+const invoke = require('./invoke');
+const traverse = require('./traverse');
 
-import Deferred from "npdefer";
+const {default: Deferred} = require("npdefer");
 
-
-class TContext implements IContext {
+class TContext {
     
-    get name() { return this._name; }
-    get rootGroup() { return this._rootGroup; }
-    currentGroup: IGroup;
-    currentTest: ITest;
-
-    private _name: string;
-    private _rootGroup: IGroup;
-    private definitionsWereExecuted: boolean = false;
-    private isDefining: boolean = false;
-    private isExecuting: boolean = false;
-    private isFinished: boolean = false;
-
-    private definitionErrors: Error[] = [];
-    private errors: Error[] = [];
-    get isDefinitionsOk() {
-        return this.definitionsWereExecuted &&
-            this.definitionErrors.length === 0;
-    }
-
-
-    
-
-    constructor(name: string) {
+    constructor(name) {
         this._name = name;
         this._rootGroup = new TGroup(this, null, name, null);
 
@@ -41,26 +16,46 @@ class TContext implements IContext {
         this.isFinished = false;
 
         this.currentGroup = this._rootGroup;
-        this.currentTest = null;
+
+        this.definitionsWereExecuted = false;
+        
+        this.definitionStarted = new Deferred();
+        this.lastDefinedPromise = this.definitionStarted.promise;
+        this.definitionFinished = new Deferred();
+
+        this.definitionErrors = [];
+        this.errors = [];
+    
     }
 
-    assertDefinitionStage(msg?: string): void {
+
+    get name() { return this._name; }
+    get rootGroup() { return this._rootGroup; }
+    currentGroup;
+    currentTest;
+
+    get isDefinitionsOk() {
+        return this.definitionsWereExecuted &&
+            this.definitionErrors.length === 0;
+    }
+
+    assertDefinitionStage(msg) {
         if (!this.isDefining) throw new Error(
             msg || "Expected to be called only in definition stage"
         );
     }
-    assertExecutionStage(msg?: string): void {
+    assertExecutionStage(msg) {
         if (!this.isExecuting) throw new Error(
             msg || "Expected to be called only in execution stage"
         );
     }
-    assertResultsStage(msg?: string): void {
+    assertResultsStage(msg) {
         if (!this.isFinished) throw new Error(
             msg || "Expected to be called only after execution is finished"
         );
     }
 
-    onError = (error: Error, options: IRunOptions) => {
+    onError = (error, options) => {
         if (this.isDefining) {
             this.definitionErrors.push(error);
         } else {
@@ -72,10 +67,7 @@ class TContext implements IContext {
         }
     }
 
-    private definitionStarted = new Deferred();
-    private lastDefinedPromise = this.definitionStarted.promise;
-    private definitionFinished = new Deferred();
-    enqueueDefinition(grp: IGroup): void {
+    enqueueDefinition(grp) {
         this.assertDefinitionStage();
         const thisGroupDefinedPromise = this.lastDefinedPromise
             .then(() => {
@@ -92,7 +84,7 @@ class TContext implements IContext {
         this.lastDefinedPromise = thisGroupDefinedPromise;
     }
 
-    private runDefinitions(options: IRunOptions) {
+    runDefinitions(options) {
         return Promise.resolve().then(() => {
             this.definitionStarted.resolve();
             return this.definitionFinished.promise;
@@ -100,7 +92,7 @@ class TContext implements IContext {
             this.definitionsWereExecuted = true;
         });
     }
-    private runTests(options: IRunOptions) {
+    runTests(options) {
         return Promise.resolve().then(() => {
             this.currentGroup = this.rootGroup;
             this.currentTest = null;
@@ -108,7 +100,7 @@ class TContext implements IContext {
         });
     }
 
-    run(options: IRunOptions = {}) {
+    run(options) {
         this.assertDefinitionStage();
         return this.runDefinitions(options).then(() => {
             this.isDefining = false;
@@ -126,9 +118,9 @@ class TContext implements IContext {
         })
     }
 
-    getResults(): IResult {
+    getResults() {
         this.assertResultsStage();
-        let results: IResult;
+        let results;
         results = {
             passed: false,
             name: this.name,
@@ -142,7 +134,7 @@ class TContext implements IContext {
             writable: true,
             configurable: true,
             enumerable: false,
-            value: (options: ResultTraverseOptions) => {
+            value: (options) => {
                 traverse(results.tests, options);
             }
         });
@@ -157,33 +149,33 @@ class TContext implements IContext {
         return results;
     }
 
-    getAPI(): ExternalAPI {
-        let iapiMethod: ExternalAPI =
-            ((name: string, cb: invoke.Callback, expect: any = invoke.Any) => {
+    getAPI() {
+        let iapiMethod =
+            ((name, cb, expect = invoke.Any) => {
                 this.currentGroup.test(name, cb, expect);
-            }) as any;
+            }) ;
         Object.assign(iapiMethod, {
             Falsy: invoke.Falsy,
             Truthy: invoke.Truthy,
             Any: invoke.Any,
             Deep: invoke.Deep
         });
-        iapiMethod.group = (name: string, cb: invoke.Callback) => {
+        iapiMethod.group = (name, cb) => {
             this.currentGroup.group(name, cb);
         };
-        iapiMethod.before = (cb: invoke.Callback) => {
+        iapiMethod.before = (cb) => {
             this.currentGroup.before(cb);
         }
-        iapiMethod.after = (cb: invoke.Callback) => {
+        iapiMethod.after = (cb) => {
             this.currentGroup.after(cb);
         }
-        iapiMethod.run = (options?: IRunOptions) => {
+        iapiMethod.run = (options) => {
             return Promise.resolve().then(() => {
                 return this.run(options).then(() => {
                     return this.getResults();
                 })
             }).catch((error) => {
-                const res: IResult = {
+                const res = {
                     name: this.name,
                     errors: [error, ...this.definitionErrors, ...this.errors],
                     date: new Date().toString(),
@@ -194,14 +186,14 @@ class TContext implements IContext {
                     writable: true,
                     configurable: true,
                     enumerable: false,
-                    value: (options: ResultTraverseOptions) => {
+                    value: (options) => {
                         traverse(res.tests, options);
                     }
                 });
                 return res;
             });
         }
-        iapiMethod.context = (name: string) => {
+        iapiMethod.context = (name) => {
             let context = new TContext(name);
             return context.getAPI();
         }
@@ -210,4 +202,4 @@ class TContext implements IContext {
     }
 }
 
-export default TContext
+module.exports = TContext

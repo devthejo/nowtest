@@ -1,14 +1,14 @@
-import test from "..";
+const {test} = require("..");
 
-function mySetImmediate(cb: () => void) {
+function mySetImmediate(cb) {
     return setTimeout(cb, 0);
 }
 
 test.group("mySetImmediate", () => {
-    test("Executes callback", (resolve: test.Handler) =>
+    test("Executes callback", (resolve) =>
         mySetImmediate(() => resolve()));
 
-    test("May be cancelled with clearTimeout", (resolve: test.Handler) => {
+    test("May be cancelled with clearTimeout", (resolve) => {
         let timeoutId = mySetImmediate(
             () => resolve(new Error(`Callback executed`))
         );

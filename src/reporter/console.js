@@ -1,6 +1,4 @@
-import { IResult, IReporter } from "..";
-
-function logTests(results: IResult) {
+function logTests(results) {
     results.traverse({
         test(result) {
             if (!result.skipped) {
@@ -20,8 +18,8 @@ function logTests(results: IResult) {
     });
 }
 
-function createReporter(options: createReporter.Options = {}): IReporter {
-    return function (results: IResult) {
+function createReporter(options = {}) {
+    return function (results) {
         const testsOk = !results.errors.length;
         console.log(`@ ${results.date}`);
 
@@ -36,7 +34,7 @@ function createReporter(options: createReporter.Options = {}): IReporter {
               console.log(`Definitions failed!`);
             }
             console.log(`=== ${results.errors.length} Errors:`);
-            results.errors.forEach((error: Error, i: number) => {
+            results.errors.forEach((error, i) => {
                 console.log(`--- ${i}. ${error.stack}`);
             });
         }
@@ -45,9 +43,4 @@ function createReporter(options: createReporter.Options = {}): IReporter {
     }
 }
 
-namespace createReporter {
-    export interface Options {
-    }
-}
-
-export default createReporter;
+module.exports = createReporter;

@@ -1,6 +1,0 @@
-Tasks:
-  ☐ track origins (test/callback) for each registered error
-  ☐ skip-method to skip certain tests/groups
-  ☐ only-method to run only certain tests/groups
-  ☐ timeout options for test, groups and wrapped callbacks
-  ☐ timeOut/Interval/Immediate override for fast testing

@@ -1,41 +1,28 @@
 {
-  "name": "testnow",
-  "version": "2.0.9",
-  "description": "Minimalistic testing framework designed for writing inline tests",
+  "name": "nowtest",
+  "version": "1.0.0",
+  "description": "Minimalistic testing framework designed for writing test tools in cli",
   "main": "index.js",
-  "types": "index.d.ts",
   "scripts": {
-    "build": "tsc && tsc -p test && webpack",
-    "test": "npm run build ; node test/server",
-    "test-web": "npm run build ; xdg-open ./test/test.html"
+    "test": "node ./test/server.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/hyperkot/testnow.git"
+    "url": "git+https://github.com/devthejo/nowtest.git"
   },
   "keywords": [
     "tests",
     "test",
-    "inline"
+    "cli",
+    "node"
   ],
-  "author": "hyperkot",
-  "license": "ISC",
+  "author": "devthejo",
+  "license": "MIT",
   "bugs": {
-    "url": "https://github.com/hyperkot/testnow/issues"
+    "url": "https://github.com/devthejo/nowtest/issues"
   },
-  "homepage": "https://github.com/hyperkot/testnow#readme",
-  "devDependencies": {
-    "@types/source-map-support": "^0.4.0",
-    "babel-core": "^6.26.3",
-    "babel-loader": "^7.1.4",
-    "babel-preset-env": "^1.7.0",
-    "source-map-support": "^0.5.6",
-    "uglifyjs-webpack-plugin": "^1.2.5",
-    "webpack": "^4.8.3",
-    "webpack-cli": "^2.1.3"
-  },
+  "homepage": "https://github.com/devthejo/nowtest#readme",
   "dependencies": {
-    "@types/json-stringify-safe": "^5.0.0",
     "fast-equals": "^1.6.1",
     "json-stringify-safe": "^5.0.1",
     "npdefer": "^1.0.5"
