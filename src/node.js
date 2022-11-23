@@ -45,7 +45,7 @@ class TNode {
         return Promise.resolve();
     }
 
-    run = (options) => {
+    run = (options = {}) => {
         if ((options.skip && options.skip.test(this.fullName)) || (options.only && !options.only.test(this.fullName))) {
             return this.skip();
         } else {
