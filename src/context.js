@@ -59,7 +59,7 @@ class TContext {
       )
   }
 
-  onError = (error, options) => {
+  onError = (error) => {
     if (this.isDefining) {
       this.definitionErrors.push(error)
     } else if (this.isExecuting) {
@@ -125,8 +125,7 @@ class TContext {
 
   getResults() {
     this.assertResultsStage()
-    let results
-    results = {
+    const results = {
       passed: false,
       name: this.name,
       definitionsOk: this.isDefinitionsOk,

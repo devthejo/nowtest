@@ -22,13 +22,12 @@ class TTest extends TNode {
     return super.getResults(parent)
   }
 
-  runTestCallback = (options = {}) => {
+  runTestCallback = (options = {}) =>
     invoke.invoke(this.cb, {
       ...this.context.options,
       ...options,
       expect: this.expect,
     })
-  }
 
   runStart() {
     this.context.currentTest = this

@@ -93,9 +93,10 @@ class TGroup extends TNode {
   }
 
   runMain(options = {}) {
+    options = { ...this.context.options, ...options }
     return invoke.sequence(
       this.children.map((inode) => () => inode.run(options)),
-      { ...this.context.options, ...options }
+      options
     )
   }
 
